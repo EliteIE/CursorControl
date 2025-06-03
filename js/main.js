@@ -1531,20 +1531,24 @@ function renderRegisterSaleForm(container, currentUser) {
 
     container.innerHTML = `
         <div class="register-sale-container">
-            <div class="sale-header flex justify-between items-center mb-6">
+            <div class="page-header">
                 <div>
-                    <h2 class="text-xl font-semibold text-slate-100">Registrar Nova Venda</h2>
-                    <p class="text-slate-400 mt-1">Selecione o cliente, produtos e quantidades</p>
+                    <h2 class="page-title">Registrar Nova Venda</h2>
+                    <p class="page-subtitle">Selecione o cliente, produtos e quantidades</p>
                 </div>
-                <div class="text-right text-sm text-slate-400">
-                    <div>${currentUser.name || currentUser.email}</div>
-                    <div id="currentDateTime">${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
+                <div class="header-info">
+                    <div class="user-info">
+                        <div class="user-details">
+                            <div class="user-name">${currentUser.name || currentUser.email}</div>
+                            <div class="user-email">${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="customer-selection-card mb-6">
-                <div class="flex flex-col md:flex-row gap-4 items-start">
-                    <div class="flex-1 w-full relative">
+                <div class="flex items-center gap-4">
+                    <div class="flex-1 relative">
                         <input type="text"
                                id="customerSearchInput"
                                class="form-input w-full"
@@ -1573,18 +1577,16 @@ function renderRegisterSaleForm(container, currentUser) {
             </div>
 
             <div class="products-selection-card mb-6">
-                <h3 class="text-lg font-semibold text-slate-100 mb-4">
-                    <i class="fas fa-shopping-cart mr-2"></i>
-                    Selecionar Produtos
-                </h3>
-
-                <div class="search-container mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-slate-100">
+                        <i class="fas fa-shopping-cart mr-2"></i>
+                        Selecionar Produtos
+                    </h3>
                     <div class="relative">
                         <input type="text"
                                id="productSearchInput"
-                               class="form-input pl-10"
-                               placeholder="Buscar produtos por nome ou categoria...">
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                               class="form-input w-64"
+                               placeholder="Buscar produtos...">
                     </div>
                 </div>
 
