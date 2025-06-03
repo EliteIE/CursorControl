@@ -729,35 +729,52 @@ table {
 /* === NOTIFICATIONS === */
 .notification-badge {
     position: absolute;
-    top: -0.25rem;
-    right: -0.25rem;
-    background: linear-gradient(135deg, var(--color-danger) 0%, #FF6B6B 100%);
+    top: -6px;
+    right: -6px;
+    background: #EF4444;
     color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    width: 1.25rem;
-    height: 1.25rem;
     border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 0 2px var(--color-bg-dark);
+    border: 2px solid #0F172A;
 }
 
 .notification-dropdown {
     position: absolute;
-    top: calc(100% + 0.5rem);
+    top: 100%;
     right: 0;
+    margin-top: 0.5rem;
     width: 320px;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border-radius: var(--border-radius-lg);
+    background: rgba(30, 41, 59, 0.95);
     border: 1px solid rgba(51, 65, 85, 0.5);
-    box-shadow: var(--shadow-xl);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     z-index: 50;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    animation: fadeIn 0.3s ease;
-    overflow: hidden;
+    backdrop-filter: blur(8px);
+}
+
+/* Estilo do botão de notificação */
+.notification-button {
+    position: relative;
+    padding: 0.5rem;
+    color: #94A3B8;
+    transition: color 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.notification-button:hover {
+    color: #F1F5F9;
+}
+
+.notification-button i {
+    font-size: 1.25rem;
 }
 
 .notification-header {
@@ -1364,5 +1381,52 @@ table {
     .customer-suggestion-info {
         flex-direction: column;
         gap: 0.5rem;
+    }
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.product-select-card {
+    background: rgba(51, 65, 85, 0.3);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.product-select-card:hover {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: rgba(56, 189, 248, 0.05);
+}
+
+.customer-selection-card input.form-input {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: #F1F5F9;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.customer-selection-card input.form-input:focus {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: rgba(30, 41, 59, 0.8);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.customer-selection-card input.form-input::placeholder {
+    color: #64748B;
+}
+
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: 1fr;
     }
 }
