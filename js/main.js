@@ -922,7 +922,7 @@ function toggleProductSelection(productId) {
 
     const existingItem = EliteControl.state.saleCart.find(item => item.productId === productId);
     if (existingItem) {
-        existingItem.quantity = quantity;
+        EliteControl.state.saleCart = EliteControl.state.saleCart.filter(item => item.productId !== productId);
     } else {
         EliteControl.state.saleCart.push({
             productId: product.id,
@@ -935,7 +935,6 @@ function toggleProductSelection(productId) {
     }
 
     updateCartDisplay();
-    showTemporaryAlert('Produto adicionado ao carrinho', 'success');
 }
 
 function changeQuantity(productId, delta, isCartItem = false) {
@@ -960,6 +959,13 @@ function updateCartItemQuantity(productId, quantity) {
     const cartItem = EliteControl.state.saleCart.find(item => item.productId === productId);
     if (!cartItem) return;
 
+    const product = EliteControl.state.availableProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    quantity = parseInt(quantity);
+    if (isNaN(quantity) || quantity < 1) quantity = 1;
+    if (quantity > product.stock) quantity = product.stock;
+
     cartItem.quantity = quantity;
     updateCartDisplay();
 }
@@ -983,13 +989,12 @@ function updateQuantity(productId) {
 
 function removeCartItem(productId) {
     EliteControl.state.saleCart = EliteControl.state.saleCart.filter(item => item.productId !== productId);
-    updateSaleInterface();
-    showTemporaryAlert('Item removido do carrinho', 'info', 2000);
+    updateCartDisplay();
 }
 
 function clearCart() {
     EliteControl.state.saleCart = [];
-    updateSaleInterface();
+    updateCartDisplay();
 }
 
 function updateSaleInterface() {
@@ -1066,7 +1071,11 @@ function updateFinalizeSaleButton() {
     const button = document.getElementById('finalizeSaleButton');
     if (!button) return;
 
-    button.disabled = EliteControl.state.saleCart.length === 0;
+    const hasCustomer = EliteControl.state.selectedCustomer !== null;
+    const hasItems = EliteControl.state.saleCart.length > 0;
+
+    button.disabled = !hasCustomer || !hasItems;
+    button.title = !hasCustomer ? 'Selecione um cliente' : !hasItems ? 'Adicione produtos ao carrinho' : '';
 }
 
 function closeSaleSuccessModal() {
@@ -1544,128 +1553,119 @@ function addProductsConsultStyles() {
 // === VENDAS COM CLIENTE ===
 
 function renderRegisterSaleForm(container, currentUser) {
-    console.log("💰 Renderizando formulário de registro de venda com CRM");
-
     container.innerHTML = `
         <div class="register-sale-container">
-            <div class="page-header">
-                <div>
-                    <h2 class="page-title">Registrar Nova Venda</h2>
-                    <p class="page-subtitle">Selecione o cliente, produtos e quantidades</p>
-                </div>
-                <div class="header-info">
-                    <div class="user-info">
-                        <div class="user-details">
-                            <div class="user-name">${currentUser.name || currentUser.email}</div>
-                            <div class="user-email" id="currentDateTime"></div>
-                        </div>
+            <div class="page-header mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-slate-100">Registrar Nova Venda</h2>
+                        <p class="text-sm text-slate-400">Selecione o cliente, produtos e quantidades</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-slate-400">Vendedor: ${currentUser.name || currentUser.email}</p>
+                        <p class="text-sm text-slate-400" id="currentDateTime"></p>
                     </div>
                 </div>
             </div>
 
-            <div class="customer-selection-card mb-6">
-                <div class="flex items-center gap-4">
+            <div class="customer-selection-section mb-6">
+                <div class="flex items-center gap-4 mb-4">
                     <div class="flex-1 relative">
                         <input type="text"
                                id="customerSearchInput"
-                               class="form-input w-full"
+                               class="form-input w-full py-3 pl-4 pr-10 bg-slate-800 border border-slate-700 rounded-lg"
                                placeholder="Digite o nome do cliente para buscar...">
                         <div id="customerSuggestions" class="customer-suggestions hidden"></div>
                     </div>
-
-                    <button id="newCustomerButton" class="btn-secondary whitespace-nowrap">
+                    <button id="newCustomerButton" class="btn-primary">
                         <i class="fas fa-user-plus mr-2"></i>
                         Novo Cliente
                     </button>
                 </div>
 
-                <div id="selectedCustomerInfo" class="selected-customer-info hidden mt-4">
-                    <div class="customer-card">
-                        <div class="customer-details">
-                            <h4 id="selectedCustomerName" class="font-semibold text-slate-100"></h4>
-                            <p id="selectedCustomerPhone" class="text-sm text-slate-400"></p>
-                            <p id="selectedCustomerStats" class="text-xs text-slate-500 mt-1"></p>
+                <div id="selectedCustomerInfo" class="selected-customer-info hidden">
+                    <div class="customer-card bg-slate-800 border border-slate-700 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 id="selectedCustomerName" class="text-lg font-semibold text-slate-100"></h4>
+                                <p id="selectedCustomerPhone" class="text-sm text-slate-400 mt-1"></p>
+                                <p id="selectedCustomerStats" class="text-sm text-slate-500 mt-1"></p>
+                            </div>
+                            <button id="removeCustomerButton" class="text-slate-400 hover:text-red-400 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <button id="removeCustomerButton" class="btn-secondary btn-sm">
-                            <i class="fas fa-times"></i>
-                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="products-selection-card mb-6">
-                <div class="flex items-center justify-between mb-4">
+            <div class="products-section mb-6">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-slate-100">
                         <i class="fas fa-shopping-cart mr-2"></i>
-                        Selecionar Produtos
+                        Produtos Disponíveis
                     </h3>
-                    <div class="relative">
+                    <div class="search-container relative">
                         <input type="text" 
                                id="productSearchInput" 
-                               class="form-input w-64"
+                               class="form-input w-64 py-2 pl-4 pr-10 bg-slate-800 border border-slate-700 rounded-lg"
                                placeholder="Buscar produtos...">
+                        <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                     </div>
                 </div>
 
-                <div id="availableProductsList" class="products-grid">
-                    <div class="loading-products">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>
-                        Carregando produtos...
-                    </div>
+                <div id="availableProductsList" class="products-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Produtos serão renderizados aqui -->
                 </div>
             </div>
 
-            <div class="cart-card mb-6">
-                <div class="cart-header">
+            <div class="cart-section bg-slate-800 border border-slate-700 rounded-lg p-6">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-slate-100">
                         <i class="fas fa-receipt mr-2"></i>
                         Itens da Venda
                     </h3>
                     <button id="clearCartButton" class="btn-secondary btn-sm" style="display: none;">
-                        <i class="fas fa-trash mr-1"></i>
+                        <i class="fas fa-trash-alt mr-2"></i>
                         Limpar
                     </button>
                 </div>
                 
-                <div id="cartItemsList" class="cart-items">
-                    <div class="empty-cart">
+                <div id="cartItemsList" class="cart-items space-y-3 mb-6">
+                    <div class="empty-cart text-center py-8">
                         <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
                         <p class="text-slate-400">Nenhum produto adicionado</p>
                         <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
                     </div>
                 </div>
 
-                <div id="cartSummary" class="cart-summary" style="display: none;">
-                    <div class="summary-row">
-                        <span>Subtotal:</span>
-                        <span id="cartSubtotal">R$ 0,00</span>
+                <div id="cartSummary" class="cart-summary border-t border-slate-700 pt-4" style="display: none;">
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-slate-400">Subtotal:</span>
+                        <span id="cartSubtotal" class="text-lg font-semibold text-slate-100">R$ 0,00</span>
                     </div>
-                    <div class="summary-row total-row">
-                        <span>Total:</span>
-                        <span id="cartTotal">R$ 0,00</span>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-slate-400">Total:</span>
+                        <span id="cartTotal" class="text-xl font-bold text-sky-400">R$ 0,00</span>
                     </div>
                 </div>
-            </div>
 
-            <div class="sale-actions">
-                <button id="cancelSaleButton" class="btn-secondary">
-                    <i class="fas fa-times mr-2"></i>
-                    Cancelar
-                </button>
-                <button id="finalizeSaleButton" class="btn-primary" disabled>
-                    <i class="fas fa-check mr-2"></i>
-                    Finalizar Venda
-                </button>
+                <div class="flex justify-between items-center mt-6">
+                    <button id="cancelSaleButton" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button id="finalizeSaleButton" class="btn-primary" disabled>
+                        <i class="fas fa-check mr-2"></i>
+                        Finalizar Venda
+                    </button>
+                </div>
             </div>
         </div>
     `;
 
-    // Aplicar estilos
-    addSaleFormStyles();
-    addCustomerStyles();
-
     // Inicializar funcionalidades
-    setupSaleFormWithCRMEventListeners(currentUser);
+    setupSaleFormEventListeners(currentUser);
     
     // Carregar e renderizar produtos disponíveis
     renderAvailableProducts(EliteControl.state.availableProducts || []);
@@ -1675,7 +1675,126 @@ function renderRegisterSaleForm(container, currentUser) {
     setInterval(updateCurrentTime, 60000);
 }
 
-function setupSaleFormWithCRMEventListeners(currentUser) {
+function renderAvailableProducts(products) {
+    const container = document.getElementById('availableProductsList');
+    if (!container) return;
+
+    if (!products || products.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-8">
+                <i class="fas fa-box-open fa-2x mb-2 text-slate-400"></i>
+                <p class="text-slate-400">Nenhum produto encontrado</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = products.map(product => `
+        <div class="product-card bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-sky-500 transition-all">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h4 class="text-lg font-semibold text-slate-100">${product.name}</h4>
+                    <p class="text-sm text-slate-400">${product.category}</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-lg font-bold text-sky-400">${formatCurrency(product.price)}</div>
+                    <div class="text-sm ${product.stock > 10 ? 'text-green-400' : product.stock > 0 ? 'text-yellow-400' : 'text-red-400'}">
+                        ${product.stock} em estoque
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="quantity-controls flex items-center bg-slate-700 rounded-lg flex-1">
+                    <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${product.id}', -1)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <input type="number" 
+                           id="quantity-${product.id}" 
+                           class="w-16 bg-transparent border-0 text-center text-slate-100" 
+                           value="1" 
+                           min="1" 
+                           max="${product.stock}">
+                    <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${product.id}', 1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                
+                <button class="btn-primary" onclick="toggleProductSelection('${product.id}')">
+                    <i class="fas fa-cart-plus mr-2"></i>
+                    Adicionar
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateCartDisplay() {
+    const container = document.getElementById('cartItemsList');
+    if (!container) return;
+
+    if (EliteControl.state.saleCart.length === 0) {
+        container.innerHTML = `
+            <div class="empty-cart text-center py-8">
+                <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
+                <p class="text-slate-400">Nenhum produto adicionado</p>
+                <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
+            </div>
+        `;
+        document.getElementById('cartSummary').style.display = 'none';
+        document.getElementById('clearCartButton').style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = EliteControl.state.saleCart.map(item => `
+        <div class="cart-item bg-slate-700 rounded-lg p-4">
+            <div class="flex justify-between items-center">
+                <div class="flex-1">
+                    <h4 class="font-semibold text-slate-100">${item.name}</h4>
+                    <p class="text-sm text-slate-400">${item.category}</p>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="quantity-controls flex items-center bg-slate-800 rounded-lg">
+                        <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${item.productId}', -1, true)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" 
+                               id="cart-quantity-${item.productId}" 
+                               class="w-16 bg-transparent border-0 text-center text-slate-100" 
+                               value="${item.quantity}" 
+                               min="1" 
+                               max="${item.stock}"
+                               onchange="updateCartItemQuantity('${item.productId}', this.value)">
+                        <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${item.productId}', 1, true)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="text-right min-w-[100px]">
+                        <div class="font-semibold text-sky-400">${formatCurrency(item.price * item.quantity)}</div>
+                        <div class="text-sm text-slate-400">${item.quantity}x ${formatCurrency(item.price)}</div>
+                    </div>
+                    
+                    <button class="text-slate-400 hover:text-red-400 transition-colors" onclick="removeCartItem('${item.productId}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Atualizar sumário
+    const subtotal = EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cartTotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cartSummary').style.display = 'block';
+    document.getElementById('clearCartButton').style.display = 'block';
+
+    updateFinalizeSaleButton();
+}
+
+function setupSaleFormEventListeners(currentUser) {
     // Busca de produtos
     const productSearchInput = document.getElementById('productSearchInput');
     if (productSearchInput) {
@@ -1689,1372 +1808,154 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
         });
     }
 
-    // Busca de clientes melhorada
+    // Busca de clientes
     const customerSearchInput = document.getElementById('customerSearchInput');
     if (customerSearchInput) {
-        let searchTimeout;
+        let debounceTimeout;
         customerSearchInput.addEventListener('input', async (e) => {
-            clearTimeout(searchTimeout);
             const searchTerm = e.target.value.trim();
-            const suggestionsContainer = document.getElementById('customerSuggestions');
-
-            // Limpar sugestões se o campo estiver vazio
+            
+            // Limpar o timeout anterior
+            if (debounceTimeout) clearTimeout(debounceTimeout);
+            
+            // Se o campo estiver vazio, esconder as sugestões
             if (!searchTerm) {
-                if (suggestionsContainer) {
-                    suggestionsContainer.classList.add('hidden');
-                    suggestionsContainer.innerHTML = '';
-                }
+                document.getElementById('customerSuggestions').classList.add('hidden');
                 return;
             }
 
-            // Buscar sugestões após um pequeno delay
-            searchTimeout = setTimeout(async () => {
+            // Configurar novo timeout para debounce
+            debounceTimeout = setTimeout(async () => {
                 try {
                     const customersRef = firebase.firestore().collection('customers');
-                    const q = searchTerm.toLowerCase();
-                    
-                    const querySnapshot = await customersRef.get();
+                    const snapshot = await customersRef
+                        .where('name', '>=', searchTerm)
+                        .where('name', '<=', searchTerm + '\uf8ff')
+                        .limit(5)
+                        .get();
+
                     const suggestions = [];
-                    
-                    querySnapshot.forEach(doc => {
-                        const customer = { id: doc.id, ...doc.data() };
-                        if (
-                            customer.name.toLowerCase().includes(q) ||
-                            (customer.cpf && customer.cpf.includes(q)) ||
-                            (customer.email && customer.email.toLowerCase().includes(q))
-                        ) {
-                            suggestions.push(customer);
-                        }
+                    snapshot.forEach(doc => {
+                        suggestions.push({ id: doc.id, ...doc.data() });
                     });
 
                     renderCustomerSuggestions(suggestions);
-                    if (suggestionsContainer) {
-                        suggestionsContainer.classList.remove('hidden');
-                    }
+                    document.getElementById('customerSuggestions').classList.remove('hidden');
                 } catch (error) {
-                    console.error('Erro ao buscar sugestões:', error);
-                    showTemporaryAlert('Erro ao buscar clientes', 'error');
+                    console.error('Erro ao buscar clientes:', error);
                 }
             }, 300);
         });
 
         // Fechar sugestões ao clicar fora
         document.addEventListener('click', (e) => {
-            const suggestionsContainer = document.getElementById('customerSuggestions');
-            if (suggestionsContainer && !customerSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.classList.add('hidden');
+            const suggestions = document.getElementById('customerSuggestions');
+            const isClickInside = customerSearchInput.contains(e.target) || 
+                                (suggestions && suggestions.contains(e.target));
+            
+            if (!isClickInside && suggestions) {
+                suggestions.classList.add('hidden');
             }
         });
     }
 
-    // Novo cliente
+    // Botão Novo Cliente
     const newCustomerButton = document.getElementById('newCustomerButton');
     if (newCustomerButton) {
-        newCustomerButton.addEventListener('click', () => showNewCustomerModal());
+        newCustomerButton.addEventListener('click', () => {
+            showCustomerModal();
+        });
     }
 
-    // Remover cliente selecionado
+    // Botão Remover Cliente
     const removeCustomerButton = document.getElementById('removeCustomerButton');
     if (removeCustomerButton) {
         removeCustomerButton.addEventListener('click', () => {
             EliteControl.state.selectedCustomer = null;
-            const custSearchInput = document.getElementById('customerSearchInput');
-            if(custSearchInput) custSearchInput.value = '';
-            const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-            if(selectedCustInfo) selectedCustInfo.classList.add('hidden');
+            document.getElementById('selectedCustomerInfo').classList.add('hidden');
+            document.getElementById('customerSearchInput').value = '';
             updateFinalizeSaleButton();
         });
     }
 
-    // Limpar carrinho
+    // Botão Limpar Carrinho
     const clearCartButton = document.getElementById('clearCartButton');
     if (clearCartButton) {
         clearCartButton.addEventListener('click', clearCart);
     }
 
-    // Cancelar venda
-    const cancelButton = document.getElementById('cancelSaleButton');
-    if (cancelButton) {
-        cancelButton.addEventListener('click', () => {
-            if (EliteControl.state.saleCart.length > 0 || EliteControl.state.selectedCustomer) {
-                showCustomConfirm(
-                    'Tem certeza que deseja cancelar esta venda? Todos os dados serão perdidos.',
-                    () => {
-                        clearCart();
-                        EliteControl.state.selectedCustomer = null;
-                        const custSearchInput = document.getElementById('customerSearchInput');
-                        if(custSearchInput) custSearchInput.value = '';
-                        const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-                        if(selectedCustInfo) selectedCustInfo.classList.add('hidden');
-                        showTemporaryAlert('Venda cancelada', 'info');
-                    }
-                );
-            } else {
-                showTemporaryAlert('Nenhuma venda para cancelar', 'info');
-            }
+    // Botão Cancelar Venda
+    const cancelSaleButton = document.getElementById('cancelSaleButton');
+    if (cancelSaleButton) {
+        cancelSaleButton.addEventListener('click', () => {
+            showCustomConfirm('Deseja realmente cancelar esta venda?', () => {
+                clearCart();
+                EliteControl.state.selectedCustomer = null;
+                document.getElementById('selectedCustomerInfo').classList.add('hidden');
+                document.getElementById('customerSearchInput').value = '';
+                updateFinalizeSaleButton();
+            });
         });
     }
 
-    // Finalizar venda
-    const finalizeButton = document.getElementById('finalizeSaleButton');
-    if (finalizeButton) {
-        finalizeButton.addEventListener('click', () => finalizeSaleWithCustomer(currentUser));
+    // Botão Finalizar Venda
+    const finalizeSaleButton = document.getElementById('finalizeSaleButton');
+    if (finalizeSaleButton) {
+        finalizeSaleButton.addEventListener('click', async () => {
+            if (!EliteControl.state.selectedCustomer || EliteControl.state.saleCart.length === 0) return;
+
+            try {
+                const sale = {
+                    customerId: EliteControl.state.selectedCustomer.id,
+                    customerName: EliteControl.state.selectedCustomer.name,
+                    items: EliteControl.state.saleCart,
+                    total: EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0),
+                    date: new Date(),
+                    vendorId: currentUser.uid,
+                    vendorName: currentUser.name || currentUser.email
+                };
+
+                await firebase.firestore().collection('sales').add(sale);
+                
+                // Atualizar estoque
+                const batch = firebase.firestore().batch();
+                for (const item of sale.items) {
+                    const productRef = firebase.firestore().collection('products').doc(item.productId);
+                    batch.update(productRef, {
+                        stock: firebase.firestore.FieldValue.increment(-item.quantity)
+                    });
+                }
+                await batch.commit();
+
+                // Atualizar estatísticas do cliente
+                const customerRef = firebase.firestore().collection('customers').doc(sale.customerId);
+                await customerRef.update({
+                    totalPurchases: firebase.firestore.FieldValue.increment(1),
+                    lastPurchaseDate: sale.date,
+                    totalSpent: firebase.firestore.FieldValue.increment(sale.total)
+                });
+
+                // Limpar formulário
+                clearCart();
+                EliteControl.state.selectedCustomer = null;
+                document.getElementById('selectedCustomerInfo').classList.add('hidden');
+                document.getElementById('customerSearchInput').value = '';
+                updateFinalizeSaleButton();
+
+                // Mostrar modal de sucesso
+                showSaleSuccessModal(sale);
+
+                // Recarregar produtos
+                await reloadProductsIfNeeded();
+            } catch (error) {
+                console.error('Erro ao finalizar venda:', error);
+                showTemporaryAlert('Erro ao finalizar venda. Tente novamente.', 'error');
+            }
+        });
     }
 }
 
 function addCustomerStyles() {
-    if (!document.getElementById('customerStyles')) {
-        const style = document.createElement('style');
-        style.id = 'customerStyles';
-        style.textContent = `
-            .customer-selection-card {
-                background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                border: 1px solid rgba(51, 65, 85, 0.5);
-                backdrop-filter: blur(10px);
-            }
-
-            .customer-suggestions {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: rgba(30, 41, 59, 0.95);
-                border: 1px solid rgba(51, 65, 85, 0.5);
-                border-radius: 0.5rem;
-                margin-top: 0.5rem;
-                max-height: 300px;
-                overflow-y: auto;
-                z-index: 50;
-                backdrop-filter: blur(10px);
-            }
-
-            .customer-suggestion-item {
-                padding: 0.75rem 1rem;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                border-bottom: 1px solid rgba(51, 65, 85, 0.3);
-            }
-
-            .customer-suggestion-item:hover {
-                background: rgba(56, 189, 248, 0.1);
-                border-left: 3px solid #38BDF8;
-            }
-
-            .customer-suggestion-item:last-child {
-                border-bottom: none;
-            }
-
-            .customer-suggestion-name {
-                font-weight: 500;
-                color: #F1F5F9;
-                margin-bottom: 0.25rem;
-            }
-
-            .customer-suggestion-info {
-                font-size: 0.75rem;
-                color: #94A3B8;
-            }
-
-            .selected-customer-info {
-                margin-top: 1rem;
-            }
-
-            .customer-card {
-                background: rgba(56, 189, 248, 0.1);
-                border: 1px solid rgba(56, 189, 248, 0.3);
-                border-radius: 0.5rem;
-                padding: 1rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .customer-modal {
-                position: fixed;
-                inset: 0;
-                background: rgba(15, 23, 42, 0.75);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                padding: 1rem;
-                backdrop-filter: blur(5px);
-            }
-
-            .customer-modal-content {
-                background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-                border-radius: 1rem;
-                border: 1px solid rgba(51, 65, 85, 0.5);
-                width: 100%;
-                max-width: 500px;
-                max-height: 90vh;
-                overflow-y: auto;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-async function initializeSaleFormWithCRM(currentUser) {
-    console.log("🛒 Inicializando formulário de venda com CRM");
-
-    try {
-        // Carregar produtos disponíveis
-        EliteControl.state.availableProducts = await DataService.getProducts();
-        renderAvailableProducts(EliteControl.state.availableProducts);
-
-        // Configurar event listeners
-        setupSaleFormWithCRMEventListeners(currentUser);
-
-        // Atualizar hora a cada minuto
-        setInterval(updateCurrentTime, 60000);
-
-        console.log("✅ Formulário de venda com CRM inicializado");
-
-    } catch (error) {
-        console.error("❌ Erro ao inicializar formulário de venda:", error);
-        showTemporaryAlert("Erro ao carregar dados. Tente novamente.", "error");
-    }
-}
-
-function setupSaleFormWithCRMEventListeners(currentUser) {
-    const searchInput = document.querySelector('.customer-search-input');
-    const suggestionsContainer = document.querySelector('.customer-suggestions');
-    
-    if (!searchInput || !suggestionsContainer) return;
-
-    let debounceTimeout;
-
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(debounceTimeout);
-        const query = e.target.value.trim();
-
-        if (query.length < 2) {
-            suggestionsContainer.classList.add('hidden');
-            return;
-        }
-
-        debounceTimeout = setTimeout(async () => {
-            try {
-                const customersRef = collection(db, 'customers');
-                const q = query.toLowerCase();
-                
-                const querySnapshot = await getDocs(customersRef);
-                const suggestions = [];
-                
-                querySnapshot.forEach(doc => {
-                    const customer = { id: doc.id, ...doc.data() };
-                    if (
-                        customer.name.toLowerCase().includes(q) ||
-                        (customer.cpf && customer.cpf.includes(q)) ||
-                        (customer.email && customer.email.toLowerCase().includes(q))
-                    ) {
-                        suggestions.push(customer);
-                    }
-                });
-
-                suggestionsContainer.classList.remove('hidden');
-                renderCustomerSuggestions(suggestions);
-            } catch (error) {
-                console.error('Erro ao buscar sugestões:', error);
-                showTemporaryAlert('Erro ao buscar clientes', 'error');
-            }
-        }, 300);
-    });
-
-    // Fechar sugestões ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-            suggestionsContainer.classList.add('hidden');
-        }
-    });
-
-    // Mostrar sugestões ao focar no input
-    searchInput.addEventListener('focus', () => {
-        if (searchInput.value.trim().length >= 2) {
-            suggestionsContainer.classList.remove('hidden');
-        }
-    });
-}
-
-function renderCustomerSuggestions(suggestions) {
-    const container = document.getElementById('customerSuggestions');
-    if (!container) return;
-
-    if (!suggestions || suggestions.length === 0) {
-        container.innerHTML = `
-            <div class="customer-suggestion-item">
-                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
-            </div>
-        `;
-        container.classList.remove('hidden');
-        return;
-    }
-
-    container.innerHTML = suggestions.map(customer => `
-        <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
-            <div class="customer-suggestion-name">
-                ${customer.name}
-                ${customer.totalPurchases > 0 ? 
-                    `<span class="text-sky-400 text-xs ml-2">${customer.totalPurchases} compras</span>` : 
-                    '<span class="text-slate-500 text-xs ml-2">Novo cliente</span>'}
-            </div>
-            <div class="customer-suggestion-info">
-                ${customer.phone ? `<span class="mr-3"><i class="fas fa-phone-alt mr-1"></i>${customer.phone}</span>` : ''}
-                ${customer.email ? `<span><i class="fas fa-envelope mr-1"></i>${customer.email}</span>` : ''}
-            </div>
-        </div>
-    `).join('');
-
-    container.classList.remove('hidden');
-}
-
-async function selectCustomer(customerId) {
-    try {
-        const customerDoc = await firebase.firestore().collection('customers').doc(customerId).get();
-        if (!customerDoc.exists) {
-            showTemporaryAlert("Cliente não encontrado", "error");
-            return;
-        }
-
-        const customer = { id: customerDoc.id, ...customerDoc.data() };
-        EliteControl.state.selectedCustomer = customer;
-
-        // Atualizar UI
-        const custSearchInput = document.getElementById('customerSearchInput');
-        if(custSearchInput) custSearchInput.value = customer.name;
-
-        const custSuggestions = document.getElementById('customerSuggestions');
-        if(custSuggestions) custSuggestions.classList.add('hidden');
-
-        const selectedCustName = document.getElementById('selectedCustomerName');
-        if(selectedCustName) selectedCustName.textContent = customer.name;
-
-        const selectedCustPhone = document.getElementById('selectedCustomerPhone');
-        if(selectedCustPhone) selectedCustPhone.textContent = customer.phone || 'Sem telefone';
-
-        // Mostrar estatísticas se disponíveis
-        const stats = customer.totalPurchases > 0 ?
-            `${customer.totalPurchases} compras • Total: ${formatCurrency(customer.totalSpent)}` :
-            'Novo cliente';
-        const selectedCustStats = document.getElementById('selectedCustomerStats');
-        if(selectedCustStats) selectedCustStats.textContent = stats;
-
-        const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-        if(selectedCustInfo) selectedCustInfo.classList.remove('hidden');
-
-        updateFinalizeSaleButton();
-    } catch (error) {
-        console.error("❌ Erro ao selecionar cliente:", error);
-        showTemporaryAlert("Erro ao carregar dados do cliente", "error");
-    }
-}
-
-function renderCustomerSuggestions(suggestions) {
-    const container = document.getElementById('customerSuggestions');
-    if (!container) return;
-
-    if (!suggestions || suggestions.length === 0) {
-        container.innerHTML = `
-            <div class="customer-suggestion-item">
-                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
-            </div>
-        `;
-        container.classList.remove('hidden');
-        return;
-    }
-
-    container.innerHTML = suggestions.map(customer => `
-        <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
-            <div class="customer-suggestion-name">
-                ${customer.name}
-                ${customer.totalPurchases > 0 ? 
-                    `<span class="text-sky-400 text-xs ml-2">${customer.totalPurchases} compras</span>` : 
-                    '<span class="text-slate-500 text-xs ml-2">Novo cliente</span>'}
-            </div>
-            <div class="customer-suggestion-info">
-                ${customer.phone ? `<span class="mr-3"><i class="fas fa-phone-alt mr-1"></i>${customer.phone}</span>` : ''}
-                ${customer.email ? `<span><i class="fas fa-envelope mr-1"></i>${customer.email}</span>` : ''}
-            </div>
-        </div>
-    `).join('');
-
-    container.classList.remove('hidden');
-}
-
-function initializeSaleFormWithCRM(currentUser) {
-    const container = document.querySelector('.register-sale-container');
-    if (!container) return;
-
-    // Adiciona a seção de pesquisa de cliente
-    const customerSearchSection = document.createElement('div');
-    customerSearchSection.className = 'customer-search-container';
-    customerSearchSection.innerHTML = `
-        <div class="relative">
-            <input type="text" 
-                   class="customer-search-input" 
-                   placeholder="Buscar cliente por nome, CPF ou email..."
-                   autocomplete="off">
-            <div class="customer-suggestions hidden"></div>
-        </div>
-        <button class="btn-primary mt-2" onclick="showNewCustomerModal()">
-            <i class="fas fa-user-plus mr-2"></i>
-            Novo Cliente
-        </button>
-    `;
-
-    // Insere a seção de pesquisa no início do container
-    container.insertBefore(customerSearchSection, container.firstChild);
-
-    setupSaleFormWithCRMEventListeners(currentUser);
-}
-
-function setupSaleFormWithCRMEventListeners(currentUser) {
-    const searchInput = document.querySelector('.customer-search-input');
-    const suggestionsContainer = document.querySelector('.customer-suggestions');
-    
-    if (!searchInput || !suggestionsContainer) return;
-
-    let debounceTimeout;
-
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(debounceTimeout);
-        const query = e.target.value.trim();
-
-        if (query.length < 2) {
-            suggestionsContainer.classList.add('hidden');
-            return;
-        }
-
-        debounceTimeout = setTimeout(async () => {
-            try {
-                const customersRef = collection(db, 'customers');
-                const q = query.toLowerCase();
-                
-                const querySnapshot = await getDocs(customersRef);
-                const suggestions = [];
-                
-                querySnapshot.forEach(doc => {
-                    const customer = { id: doc.id, ...doc.data() };
-                    if (
-                        customer.name.toLowerCase().includes(q) ||
-                        (customer.cpf && customer.cpf.includes(q)) ||
-                        (customer.email && customer.email.toLowerCase().includes(q))
-                    ) {
-                        suggestions.push(customer);
-                    }
-                });
-
-                suggestionsContainer.classList.remove('hidden');
-                renderCustomerSuggestions(suggestions);
-            } catch (error) {
-                console.error('Erro ao buscar sugestões:', error);
-                showTemporaryAlert('Erro ao buscar clientes', 'error');
-            }
-        }, 300);
-    });
-
-    // Fechar sugestões ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-            suggestionsContainer.classList.add('hidden');
-        }
-    });
-
-    // Mostrar sugestões ao focar no input
-    searchInput.addEventListener('focus', () => {
-        if (searchInput.value.trim().length >= 2) {
-            suggestionsContainer.classList.remove('hidden');
-        }
-    });
-}
-
-// === SEÇÃO DE CLIENTES ===
-
-async function renderCustomersSection(container, currentUser) {
-    console.log("👥 Renderizando seção de clientes");
-
-    // Apenas admin pode acessar
-    if (currentUser.role !== 'Dono/Gerente') {
-        container.innerHTML = `
-            <div class="text-center py-8 text-red-400">
-                <i class="fas fa-lock fa-3x mb-4"></i>
-                <p>Acesso restrito ao administrador.</p>
-            </div>
-        `;
-        return;
-    }
-
-    try {
-        if (typeof CRMService === 'undefined' || typeof CRMService.getCustomers !== 'function' || typeof CRMService.getCustomerInsights !== 'function') {
-            console.warn("CRMService ou suas funções não estão definidos.");
-            container.innerHTML = `<div class="text-center py-8 text-red-400"><i class="fas fa-exclamation-triangle fa-3x mb-4"></i><p>Erro: Serviço de CRM indisponível.</p></div>`;
-            return;
-        }
-
-        // Carregar dados
-        const [customers, insights] = await Promise.all([
-            CRMService.getCustomers(),
-            CRMService.getCustomerInsights()
-        ]);
-
-        container.innerHTML = `
-            <div class="customers-container">
-                <div class="customers-header mb-6">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-xl font-semibold text-slate-100">Gerenciamento de Clientes</h2>
-                            <p class="text-slate-400 mt-1">Sistema CRM com IA para relacionamento e vendas</p>
-                        </div>
-                        <button id="addCustomerButton" class="btn-primary">
-                            <i class="fas fa-user-plus mr-2"></i>
-                            Novo Cliente
-                        </button>
-                    </div>
-                </div>
-
-                <div class="customers-kpis grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="kpi-card">
-                        <div class="kpi-icon-wrapper">
-                            <i class="fas fa-users kpi-icon"></i>
-                        </div>
-                        <div class="kpi-content">
-                            <div class="kpi-title">Total de Clientes</div>
-                            <div class="kpi-value">${insights.totalCustomers}</div>
-                        </div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-icon-wrapper">
-                            <i class="fas fa-star kpi-icon"></i>
-                        </div>
-                        <div class="kpi-content">
-                            <div class="kpi-title">Clientes VIP</div>
-                            <div class="kpi-value">${insights.segmentation.vip}</div>
-                        </div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-icon-wrapper">
-                            <i class="fas fa-exclamation-triangle kpi-icon"></i>
-                        </div>
-                        <div class="kpi-content">
-                            <div class="kpi-title">Inativos (+30 dias)</div>
-                            <div class="kpi-value text-warning">${insights.segmentation.inativos}</div>
-                        </div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-icon-wrapper">
-                            <i class="fas fa-dollar-sign kpi-icon"></i>
-                        </div>
-                        <div class="kpi-content">
-                            <div class="kpi-title">Receita Total</div>
-                            <div class="kpi-value">${formatCurrency(insights.totalRevenue)}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="customers-tools bg-slate-800 p-4 rounded-lg mb-6">
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <div class="flex-1">
-                            <div class="relative">
-                                <input type="text"
-                                       id="customerSearchInput"
-                                       class="form-input pl-10 w-full"
-                                       placeholder="Buscar clientes por nome, telefone ou email...">
-                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <select id="customerStatusFilter" class="form-select">
-                                <option value="">Todos os Status</option>
-                                <option value="active">Ativos</option>
-                                <option value="inactive">Inativos</option>
-                            </select>
-                            <select id="customerSortFilter" class="form-select">
-                                <option value="name">Nome (A-Z)</option>
-                                <option value="-totalSpent">Maior Gasto</option>
-                                <option value="lastPurchaseDate">Última Compra</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="customers-table-container bg-slate-800 rounded-lg overflow-hidden">
-                    <table class="min-w-full divide-y divide-slate-700">
-                        <thead class="bg-slate-700">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Cliente
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Contato
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Total Gasto
-                                </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Última Compra
-                                </th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
-                                    Ações
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-700" id="customersTableBody">
-                            ${renderCustomersTableRows(customers)}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-
-        // Configurar event listeners
-        setupCustomersEventListeners();
-
-    } catch (error) {
-        console.error("❌ Erro ao carregar clientes:", error);
-        container.innerHTML = `
-            <div class="text-center py-8 text-red-400">
-                <i class="fas fa-times-circle fa-3x mb-4"></i>
-                <p>Erro ao carregar dados dos clientes.</p>
-            </div>
-        `;
-    }
-}
-
-function renderCustomersTableRows(customers) {
-    if (!customers || customers.length === 0) {
-        return `
-            <tr>
-                <td colspan="6" class="px-6 py-4 text-center text-slate-400">
-                    <i class="fas fa-users fa-2x mb-2"></i>
-                    <p>Nenhum cliente cadastrado</p>
-                </td>
-            </tr>
-        `;
-    }
-
-    return customers.map(customer => {
-        const status = getCustomerStatus(customer);
-        const lastPurchaseDate = customer.lastPurchaseDate ? formatDate(customer.lastPurchaseDate.toDate()) : 'Nunca';
-        
-        return `
-            <tr class="hover:bg-slate-750 transition-colors duration-150">
-                <td class="px-6 py-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center">
-                            <i class="fas fa-user text-slate-400"></i>
-                        </div>
-                        <div class="ml-4">
-                            <div class="text-sm font-medium text-slate-200">${customer.name}</div>
-                            ${customer.cpf ? `<div class="text-sm text-slate-400">CPF: ${customer.cpf}</div>` : ''}
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="text-sm text-slate-300">${customer.phone}</div>
-                    ${customer.email ? `<div class="text-sm text-slate-400">${customer.email}</div>` : ''}
-                </td>
-                <td class="px-6 py-4">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.class}">
-                        ${status.text}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-300">
-                    ${formatCurrency(customer.totalSpent || 0)}
-                    ${customer.totalPurchases ? `<div class="text-xs text-slate-400">${customer.totalPurchases} compras</div>` : ''}
-                </td>
-                <td class="px-6 py-4 text-sm text-slate-300">
-                    ${lastPurchaseDate}
-                </td>
-                <td class="px-6 py-4 text-right text-sm font-medium">
-                    <button onclick="viewCustomerDetails('${customer.id}')" class="text-sky-400 hover:text-sky-300 mr-3">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button onclick="editCustomer('${customer.id}')" class="text-sky-400 hover:text-sky-300 mr-3">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button onclick="deleteCustomer('${customer.id}')" class="text-red-500 hover:text-red-400">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function getCustomerStatus(customer) {
-    if (!customer.lastPurchaseDate) {
-        return {
-            text: 'Novo',
-            class: 'bg-sky-900 text-sky-200'
-        };
-    }
-
-    const daysSinceLastPurchase = Math.floor(
-        (new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysSinceLastPurchase > 90) {
-        return {
-            text: 'Inativo',
-            class: 'bg-red-900 text-red-200'
-        };
-    }
-
-    if (customer.totalPurchases >= 10) {
-        return {
-            text: 'VIP',
-            class: 'bg-yellow-900 text-yellow-200'
-        };
-    }
-
-    if (customer.totalPurchases >= 5) {
-        return {
-            text: 'Frequente',
-            class: 'bg-green-900 text-green-200'
-        };
-    }
-
-    return {
-        text: 'Regular',
-        class: 'bg-slate-600 text-slate-200'
-    };
-}
-
-function setupCustomersEventListeners() {
-    // Busca de clientes
-    const searchInput = document.getElementById('customerSearchInput');
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => filterCustomers(), 300);
-        });
-    }
-
-    // Filtros
-    const statusFilter = document.getElementById('customerStatusFilter');
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterCustomers);
-    }
-
-    const sortFilter = document.getElementById('customerSortFilter');
-    if (sortFilter) {
-        sortFilter.addEventListener('change', filterCustomers);
-    }
-
-    // Botão novo cliente
-    const addButton = document.getElementById('addCustomerButton');
-    if (addButton) {
-        addButton.addEventListener('click', () => showCustomerModal());
-    }
-}
-
-async function filterCustomers() {
-    const searchTerm = document.getElementById('customerSearchInput')?.value.toLowerCase() || '';
-    const status = document.getElementById('customerStatusFilter')?.value;
-    const sort = document.getElementById('customerSortFilter')?.value;
-
-    try {
-        let customers = await CRMService.getCustomers();
-
-        // Aplicar busca
-        if (searchTerm) {
-            customers = customers.filter(customer =>
-                customer.name.toLowerCase().includes(searchTerm) ||
-                customer.phone.includes(searchTerm) ||
-                (customer.email && customer.email.toLowerCase().includes(searchTerm))
-            );
-        }
-
-        // Aplicar filtro de status
-        if (status) {
-            customers = customers.filter(customer => {
-                if (status === 'inactive') {
-                    return !customer.lastPurchaseDate || 
-                           Math.floor((new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)) > 90;
-                }
-                return customer.lastPurchaseDate && 
-                       Math.floor((new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)) <= 90;
-            });
-        }
-
-        // Aplicar ordenação
-        if (sort) {
-            const [field, direction] = sort.startsWith('-') ? [sort.slice(1), 'desc'] : [sort, 'asc'];
-            customers.sort((a, b) => {
-                let valueA = a[field];
-                let valueB = b[field];
-
-                if (field === 'lastPurchaseDate') {
-                    valueA = valueA ? valueA.toDate().getTime() : 0;
-                    valueB = valueB ? valueB.toDate().getTime() : 0;
-                }
-
-                if (direction === 'desc') {
-                    return valueB - valueA;
-                }
-                return valueA - valueB;
-            });
-        }
-
-        // Atualizar tabela
-        const tbody = document.getElementById('customersTableBody');
-        if (tbody) {
-            tbody.innerHTML = renderCustomersTableRows(customers);
-        }
-
-    } catch (error) {
-        console.error("❌ Erro ao filtrar clientes:", error);
-        showTemporaryAlert("Erro ao filtrar clientes", "error");
-    }
-}
-
-function showCustomerModal(customerId = null) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-backdrop';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">${customerId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-                <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">
-                    &times;
-                </button>
-            </div>
-
-            <form id="customerForm" class="modal-body">
-                <input type="hidden" id="customerId" value="${customerId || ''}">
-                
-                <div class="form-group">
-                    <label for="customerName" class="form-label">Nome *</label>
-                    <input type="text"
-                           id="customerName"
-                           class="form-input"
-                           placeholder="Nome completo"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerPhone" class="form-label">Telefone *</label>
-                    <input type="tel"
-                           id="customerPhone"
-                           class="form-input"
-                           placeholder="(00) 00000-0000"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerEmail" class="form-label">Email</label>
-                    <input type="email"
-                           id="customerEmail"
-                           class="form-input"
-                           placeholder="email@exemplo.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="customerCPF" class="form-label">CPF</label>
-                    <input type="text"
-                           id="customerCPF"
-                           class="form-input"
-                           placeholder="000.000.000-00">
-                </div>
-
-                <div class="form-group">
-                    <label for="customerAddress" class="form-label">Endereço</label>
-                    <textarea id="customerAddress"
-                              class="form-input"
-                              rows="2"
-                              placeholder="Endereço completo"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerBirthdate" class="form-label">Data de Nascimento</label>
-                    <input type="date"
-                           id="customerBirthdate"
-                           class="form-input">
-                </div>
-            </form>
-
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="this.closest('.modal-backdrop').remove()">
-                    Cancelar
-                </button>
-                <button class="btn-primary" onclick="saveCustomer()">
-                    <i class="fas fa-save mr-2"></i>
-                    Salvar Cliente
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    setTimeout(() => modal.classList.remove('hidden'), 10);
-
-    if (customerId) {
-        loadCustomerData(customerId);
-    }
-}
-
-async function loadCustomerData(customerId) {
-    try {
-        const customer = await CRMService.getCustomerById(customerId);
-        if (!customer) {
-            showTemporaryAlert("Cliente não encontrado", "error");
-            return;
-        }
-
-        // Preencher formulário
-        document.getElementById('customerName').value = customer.name || '';
-        document.getElementById('customerPhone').value = customer.phone || '';
-        document.getElementById('customerEmail').value = customer.email || '';
-        document.getElementById('customerCPF').value = customer.cpf || '';
-        document.getElementById('customerAddress').value = customer.address || '';
-        document.getElementById('customerBirthdate').value = customer.birthdate || '';
-        document.getElementById('customerNotes').value = customer.notes || '';
-
-    } catch (error) {
-        console.error("❌ Erro ao carregar dados do cliente:", error);
-        showTemporaryAlert("Erro ao carregar dados do cliente", "error");
-    }
-}
-
-async function saveCustomer() {
-    const form = document.getElementById('customerForm');
-    if (!form || !form.checkValidity()) {
-        if(form) form.reportValidity();
-        return;
-    }
-
-    const customerData = {
-        id: document.getElementById('customerId').value,
-        name: document.getElementById('customerName').value.trim(),
-        phone: document.getElementById('customerPhone').value.replace(/\D/g, ''),
-        email: document.getElementById('customerEmail').value.trim(),
-        cpf: document.getElementById('customerCPF').value.replace(/\D/g, ''),
-        address: document.getElementById('customerAddress').value.trim(),
-        birthdate: document.getElementById('customerBirthdate').value,
-        notes: document.getElementById('customerNotes').value.trim()
-    };
-
-    try {
-        await CRMService.createOrUpdateCustomer(customerData);
-        
-        // Fechar modal
-        const modal = document.querySelector('.modal-backdrop');
-        if (modal) modal.remove();
-
-        // Atualizar lista
-        filterCustomers();
-
-        showTemporaryAlert(
-            customerData.id ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!',
-            'success'
-        );
-
-    } catch (error) {
-        console.error("❌ Erro ao salvar cliente:", error);
-        showTemporaryAlert("Erro ao salvar cliente. Verifique os dados.", "error");
-    }
-}
-
-async function viewCustomerDetails(customerId) {
-    try {
-        const customer = await CRMService.getCustomerById(customerId);
-        if (!customer) {
-            showTemporaryAlert("Cliente não encontrado", "error");
-            return;
-        }
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-backdrop';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Detalhes do Cliente</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">
-                        &times;
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="customer-details-header mb-6">
-                        <div class="flex items-center">
-                            <div class="h-16 w-16 rounded-full bg-slate-700 flex items-center justify-center">
-                                <i class="fas fa-user fa-lg text-slate-400"></i>
-                            </div>
-                            <div class="ml-4">
-                                <h4 class="text-lg font-semibold text-slate-100">${customer.name}</h4>
-                                <p class="text-slate-400">${customer.phone}</p>
-                                ${customer.email ? `<p class="text-slate-400">${customer.email}</p>` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div class="bg-slate-800 p-4 rounded-lg">
-                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Informações Pessoais</h5>
-                            <div class="space-y-2">
-                                ${customer.cpf ? `
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-400">CPF:</span>
-                                        <span class="text-slate-300">${customer.cpf}</span>
-                                    </div>
-                                ` : ''}
-                                ${customer.birthdate ? `
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-400">Data de Nascimento:</span>
-                                        <span class="text-slate-300">${formatDate(customer.birthdate)}</span>
-                                    </div>
-                                ` : ''}
-                                ${customer.address ? `
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-400">Endereço:</span>
-                                        <span class="text-slate-300">${customer.address}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-800 p-4 rounded-lg">
-                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Histórico de Compras</h5>
-                            <div class="space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Total de Compras:</span>
-                                    <span class="text-slate-300">${customer.totalPurchases || 0}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Total Gasto:</span>
-                                    <span class="text-slate-300">${formatCurrency(customer.totalSpent || 0)}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-slate-400">Ticket Médio:</span>
-                                    <span class="text-slate-300">${formatCurrency(customer.averageTicket || 0)}</span>
-                                </div>
-                                ${customer.lastPurchaseDate ? `
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-400">Última Compra:</span>
-                                        <span class="text-slate-300">${formatDate(customer.lastPurchaseDate.toDate())}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    ${customer.notes ? `
-                        <div class="bg-slate-800 p-4 rounded-lg mb-6">
-                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Observações</h5>
-                            <p class="text-slate-400">${customer.notes}</p>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-backdrop').remove()">
-                        Fechar
-                    </button>
-                    <button class="btn-primary" onclick="editCustomer('${customer.id}')">
-                        <i class="fas fa-edit mr-2"></i>
-                        Editar Cliente
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-        setTimeout(() => modal.classList.remove('hidden'), 10);
-
-    } catch (error) {
-        console.error("❌ Erro ao carregar detalhes do cliente:", error);
-        showTemporaryAlert("Erro ao carregar detalhes do cliente", "error");
-    }
-}
-
-function editCustomer(customerId) {
-    // Fechar modal de detalhes se estiver aberto
-    const detailsModal = document.querySelector('.modal-backdrop');
-    if (detailsModal) detailsModal.remove();
-
-    // Abrir modal de edição
-    showCustomerModal(customerId);
-}
-
-function deleteCustomer(customerId) {
-    showCustomConfirm(
-        'Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.',
-        async () => {
-            try {
-                await CRMService.deleteCustomer(customerId);
-                filterCustomers();
-                showTemporaryAlert('Cliente excluído com sucesso!', 'success');
-            } catch (error) {
-                console.error("❌ Erro ao excluir cliente:", error);
-                showTemporaryAlert("Erro ao excluir cliente", "error");
-            }
-        }
-    );
-}
-
-// === SEÇÃO DE USUÁRIOS ===
-
-function renderUsersSection(container) {
-    console.log("👥 Renderizando seção de usuários (em desenvolvimento)");
-
-    container.innerHTML = `
-        <div class="users-container">
-            <h2 class="text-xl font-semibold text-slate-100 mb-4">Gerenciamento de Usuários</h2>
-
-            <div class="text-center py-16 text-slate-400">
-                <i class="fas fa-users-cog fa-4x mb-4"></i>
-                <p class="text-lg">Seção em desenvolvimento</p>
-                <p class="text-sm mt-2">Em breve você poderá gerenciar usuários e permissões do sistema.</p>
-            </div>
-        </div>
-    `;
-}
-
-// === CONFIGURAÇÃO DE EVENT LISTENERS ===
-
-function setupEventListeners() {
-    console.log("🔧 Configurando event listeners gerais");
-
-    setupFormListeners();
-    setupNavigationListeners();
-    setupDropdownListeners();
-    
-    // Configurar listeners de produtos (sempre, pois usa delegação de eventos)
-    setupProductActionListeners();
-
-    // Configurar listeners do modal de produtos se estiver no dashboard
-    if (window.location.pathname.includes('dashboard.html')) {
-        // Tentar configurar modal se existir
-        if (EliteControl.elements.productModal && !EliteControl.state.modalEventListenersAttached) {
-            if (typeof setupModalEventListeners === 'function') {
-                console.log("🔧 Configurando listeners do modal de produto");
-                setupModalEventListeners();
-            } else {
-                console.error("❌ Função setupModalEventListeners não está definida");
-            }
-        }
-    }
-    
-    console.log("✅ Event listeners gerais configurados");
-}
-
-function setupFormListeners() {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-
-    const logoutButton = document.getElementById('logoutButton');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', handleLogout);
-    }
-}
-
-function setupNavigationListeners() {
-    window.addEventListener('hashchange', handleHashChange);
-
-    document.addEventListener('click', function(e) {
-        const navLink = e.target.closest('#navLinks a.nav-link');
-        if (navLink) {
-            e.preventDefault();
-            const section = navLink.dataset.section;
-            if (section) {
-                window.location.hash = '#' + section;
-            }
-        }
-    });
-}
-
-function setupDropdownListeners() {
-    const notificationBellButton = document.getElementById('notificationBellButton');
-    const notificationDropdown = document.getElementById('notificationDropdown');
-
-    if (notificationBellButton && notificationDropdown) {
-        notificationBellButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            notificationDropdown.classList.toggle('hidden');
-        });
-    }
-
-    const userMenuButton = document.getElementById('userMenuButton');
-    const userDropdown = document.getElementById('userDropdown');
-
-    if (userMenuButton && userDropdown) {
-        userMenuButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userDropdown.classList.toggle('hidden');
-        });
-    }
-
-    document.addEventListener('click', (e) => {
-        if (notificationDropdown &&
-            !notificationBellButton?.contains(e.target) &&
-            !notificationDropdown.contains(e.target)) {
-            notificationDropdown.classList.add('hidden');
-        }
-
-        if (userDropdown &&
-            !userMenuButton?.contains(e.target) &&
-            !userDropdown.contains(e.target)) {
-            userDropdown.classList.add('hidden');
-        }
-    });
-
-    const markAllAsReadButton = document.getElementById('markAllAsReadButton');
-    if (markAllAsReadButton) {
-        markAllAsReadButton.addEventListener('click', markAllNotificationsAsRead);
-    }
-}
-
-function setupProductActionListeners() {
-    // Usar delegação de eventos para capturar cliques em botões criados dinamicamente
-    console.log("🔧 Configurando listeners de produtos com delegação de eventos");
-    
-    document.addEventListener('click', function(e) {
-        // Botão de adicionar produto
-        if (e.target.closest('#openAddProductModalButton')) {
-            e.preventDefault();
-            console.log("🔘 Botão adicionar produto clicado");
-            
-            // Garantir que os elementos do modal estão inicializados
-            if (!EliteControl.elements.productModal) {
-                console.log("Modal não inicializado, inicializando...");
-                initializeModalElements();
-            }
-            
-            // Configurar event listeners do modal se necessário
-            if (!EliteControl.state.modalEventListenersAttached && EliteControl.elements.productModal) {
-                console.log("Configurando listeners do modal...");
-                setupModalEventListeners();
-            }
-            
-            openProductModal();
-            return;
-        }
-
-        // Botão de editar produto
-        const editButton = e.target.closest('.edit-product-btn');
-        if (editButton) {
-            e.preventDefault();
-            console.log("✏️ Botão editar produto clicado");
-            const productId = editButton.dataset.productId;
-            console.log("Product ID:", productId);
-            
-            if (productId) {
-                // Garantir que os elementos do modal estão inicializados
-                if (!EliteControl.elements.productModal) {
-                    console.log("Modal não inicializado para edição, inicializando...");
-                    initializeModalElements();
-                }
-                
-                // Configurar event listeners do modal se necessário
-                if (!EliteControl.state.modalEventListenersAttached && EliteControl.elements.productModal) {
-                    console.log("Configurando listeners do modal para edição...");
-                    setupModalEventListeners();
-                }
-                
-                handleEditProduct(productId);
-            } else {
-                console.error("Product ID não encontrado no botão de editar");
-            }
-            return;
-        }
-
-        // Botão de excluir produto
-        const deleteButton = e.target.closest('.delete-product-btn');
-        if (deleteButton) {
-            e.preventDefault();
-            console.log("🗑️ Botão excluir produto clicado");
-            const productId = deleteButton.dataset.productId;
-            const productName = deleteButton.dataset.productName;
-            console.log("Product ID:", productId, "Product Name:", productName);
-            
-            if (productId && productName) {
-                handleDeleteProductConfirmation(productId, productName);
-            } else {
-                console.error("Product ID ou Name não encontrado no botão de excluir");
-            }
-            return;
-        }
-    });
-}
-
-// === HANDLERS DE EVENTOS ===
-
-function handleHashChange() {
-    const currentUser = firebase.auth().currentUser;
-    if (!currentUser) {
-        console.log("Hash mudou, mas usuário não está logado. Ignorando.");
-        return;
-    }
-
-    const userRole = localStorage.getItem('elitecontrol_user_role');
-    if (!userRole) {
-        console.warn("Hash mudou, mas role do usuário não encontrado no localStorage. Logout pode ser necessário.");
-        return;
-    }
-
-    const section = window.location.hash.substring(1);
-    const defaultSection = getDefaultSection(userRole);
-    const targetSection = section || defaultSection;
-
-    updateSidebarActiveState(targetSection);
-    loadSectionContent(targetSection, {
-        uid: currentUser.uid,
-        email: currentUser.email,
-        role: userRole
-    });
-}
-
-async function handleEditProduct(productId) {
-    console.log("✏️ Editando produto com ID:", productId);
-
-    if (!productId) {
-        console.error("❌ ID do produto não fornecido");
-        showTemporaryAlert('Erro: ID do produto não encontrado.', 'error');
-        return;
-    }
-
-    try {
-        // Mostrar loading
-        showTemporaryAlert('Carregando dados do produto...', 'info', 2000);
-        
-        const product = await DataService.getProductById(productId);
-        
-        if (product) {
-            console.log("✅ Produto encontrado:", product);
-            openProductModal(product);
-        } else {
-            console.error("❌ Produto não encontrado:", productId);
-            showTemporaryAlert('Produto não encontrado.', 'error');
-        }
-    } catch (error) {
-        console.error("❌ Erro ao carregar produto para edição:", error);
-        showTemporaryAlert('Erro ao carregar dados do produto.', 'error');
-    }
-}
-
-function handleDeleteProductConfirmation(productId, productName) {
-    console.log("🗑️ Confirmando exclusão do produto:", productName);
-
-    showCustomConfirm(
-        `Tem certeza que deseja excluir o produto "${productName}"?\n\nEsta ação não pode ser desfeita.`,
-        async () => {
-            try {
-                await DataService.deleteProduct(productId);
-                showTemporaryAlert(`Produto "${productName}" excluído com sucesso.`, 'success');
-                await reloadProductsIfNeeded();
-            } catch (error) {
                 console.error("❌ Erro ao excluir produto:", error);
                 showTemporaryAlert(`Erro ao excluir produto "${productName}".`, 'error');
             }
