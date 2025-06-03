@@ -47,6 +47,18 @@ const EliteControl = {
     }
 };
 
+// Configurar event listeners assim que o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("🔧 Configurando event listeners iniciais");
+    setupProductActionListeners();
+    
+    // Garantir que os elementos do modal estão inicializados
+    initializeModalElements();
+    
+    // Configurar event listeners do modal
+    setupModalEventListeners();
+});
+
 // Produtos de exemplo
 const sampleProducts = [
     { name: 'Notebook Dell Inspiron', category: 'Eletrônicos', price: 2500.00, stock: 15, lowStockAlert: 10 },
@@ -69,7 +81,15 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeModalElements() {
     console.log("🔧 Inicializando elementos do modal de produto");
     
-    EliteControl.elements.productModal = document.getElementById('productModal');
+    // Verificar se o modal existe no DOM
+    const modalElement = document.getElementById('productModal');
+    if (!modalElement) {
+        console.error("❌ Modal de produto não encontrado no DOM");
+        return false;
+    }
+    console.log("✅ Modal encontrado no DOM");
+    
+    EliteControl.elements.productModal = modalElement;
     EliteControl.elements.productForm = document.getElementById('productForm');
     EliteControl.elements.productModalTitle = document.getElementById('productModalTitle');
     EliteControl.elements.productIdField = document.getElementById('productId');
@@ -83,7 +103,7 @@ function initializeModalElements() {
     EliteControl.elements.saveProductButton = document.getElementById('saveProductButton');
     
     // Log dos elementos encontrados para debug
-    console.log("Modal elements status:", {
+    const elementStatus = {
         productModal: !!EliteControl.elements.productModal,
         productForm: !!EliteControl.elements.productForm,
         productModalTitle: !!EliteControl.elements.productModalTitle,
@@ -96,13 +116,32 @@ function initializeModalElements() {
         closeProductModalButton: !!EliteControl.elements.closeProductModalButton,
         cancelProductFormButton: !!EliteControl.elements.cancelProductFormButton,
         saveProductButton: !!EliteControl.elements.saveProductButton
-    });
+    };
     
-    if (!EliteControl.elements.productModal) {
-        console.error("❌ Modal de produto não encontrado no DOM. Certifique-se de que está na página correta.");
+    console.log("Status dos elementos do modal:", elementStatus);
+    
+    // Verificar se todos os elementos obrigatórios foram encontrados
+    const requiredElements = [
+        'productForm',
+        'productModalTitle',
+        'productNameField',
+        'productCategoryField',
+        'productPriceField',
+        'productStockField',
+        'closeProductModalButton',
+        'saveProductButton'
+    ];
+    
+    const missingElements = requiredElements.filter(
+        elementName => !EliteControl.elements[elementName]
+    );
+    
+    if (missingElements.length > 0) {
+        console.error("❌ Elementos obrigatórios não encontrados:", missingElements);
         return false;
     }
     
+    console.log("✅ Todos os elementos obrigatórios encontrados");
     return true;
 }
 
@@ -176,6 +215,35 @@ function handleModalClose() {
     }
 }
 
+function checkModalVisibility() {
+    const modal = document.getElementById('productModal');
+    if (!modal) {
+        console.error("❌ Modal não encontrado na verificação de visibilidade");
+        return;
+    }
+
+    // Verificar se o modal está visível
+    const isVisible = !modal.classList.contains('hidden');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    if (!modalContent) {
+        console.error("❌ Conteúdo do modal não encontrado");
+        return;
+    }
+
+    console.log("Status do modal:", {
+        isVisible,
+        hasHiddenClass: modal.classList.contains('hidden'),
+        display: window.getComputedStyle(modal).display,
+        opacity: window.getComputedStyle(modal).opacity,
+        visibility: window.getComputedStyle(modal).visibility,
+        zIndex: window.getComputedStyle(modal).zIndex,
+        modalContentDisplay: window.getComputedStyle(modalContent).display,
+        modalContentOpacity: window.getComputedStyle(modalContent).opacity,
+        modalContentVisibility: window.getComputedStyle(modalContent).visibility
+    });
+}
+
 function openProductModal(product = null) {
     console.log("📝 Abrindo modal de produto:", product ? 'Editar' : 'Novo');
     
@@ -184,9 +252,11 @@ function openProductModal(product = null) {
         console.log("Modal não inicializado, tentando inicializar...");
         const success = initializeModalElements();
         if (!success) {
+            console.error("❌ Falha ao inicializar elementos do modal");
             showTemporaryAlert("Erro: Modal de produto não disponível nesta página.", "error");
             return;
         }
+        console.log("✅ Elementos do modal inicializados com sucesso");
     }
 
     if (EliteControl.state.isModalProcessing) {
@@ -198,11 +268,13 @@ function openProductModal(product = null) {
     if (!EliteControl.state.modalEventListenersAttached) {
         console.log("Configurando event listeners do modal...");
         setupModalEventListeners();
+        console.log("✅ Event listeners do modal configurados");
     }
 
     // Resetar formulário
     if (EliteControl.elements.productForm) {
         EliteControl.elements.productForm.reset();
+        console.log("✅ Formulário resetado");
     }
 
     if (product) {
@@ -215,7 +287,7 @@ function openProductModal(product = null) {
         if (EliteControl.elements.productStockField) EliteControl.elements.productStockField.value = product.stock;
         if (EliteControl.elements.productLowStockAlertField) EliteControl.elements.productLowStockAlertField.value = product.lowStockAlert || 10;
         
-        console.log("Produto carregado para edição:", {
+        console.log("✅ Produto carregado para edição:", {
             id: product.id,
             name: product.name,
             category: product.category,
@@ -229,21 +301,32 @@ function openProductModal(product = null) {
         if (EliteControl.elements.productIdField) EliteControl.elements.productIdField.value = '';
         if (EliteControl.elements.productLowStockAlertField) EliteControl.elements.productLowStockAlertField.value = 10;
         
-        console.log("Modal configurado para novo produto");
+        console.log("✅ Modal configurado para novo produto");
     }
 
     // Mostrar modal
-    EliteControl.elements.productModal.classList.remove('hidden');
+    if (EliteControl.elements.productModal) {
+        EliteControl.elements.productModal.classList.remove('hidden');
+        console.log("✅ Modal exibido - Classe 'hidden' removida");
+        
+        // Verificar visibilidade após um pequeno delay
+        setTimeout(checkModalVisibility, 100);
+    } else {
+        console.error("❌ Elemento do modal não encontrado ao tentar exibir");
+    }
     
     // Focar no primeiro campo
     if (EliteControl.elements.productNameField) {
         setTimeout(() => {
             EliteControl.elements.productNameField.focus();
-            console.log("Foco aplicado no campo nome");
+            console.log("✅ Foco aplicado no campo nome");
+            
+            // Verificar visibilidade novamente após o foco
+            checkModalVisibility();
         }, 100);
+    } else {
+        console.error("❌ Campo de nome não encontrado ao tentar focar");
     }
-    
-    console.log("✅ Modal aberto com sucesso");
 }
 
 async function handleProductFormSubmit(event) {
