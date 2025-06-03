@@ -600,61 +600,59 @@ function renderAvailableProducts(products) {
 
     if (!products || products.length === 0) {
         container.innerHTML = `
-            <div class="text-center py-8 text-slate-400">
-                <i class="fas fa-box-open fa-3x mb-4"></i>
-                <p>Nenhum produto disponível.</p>
+            <div class="text-center text-slate-400 p-4">
+                <i class="fas fa-box-open fa-2x mb-2"></i>
+                <p>Nenhum produto encontrado</p>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = products.map(product => {
-        const isOutOfStock = product.stock === 0;
-        const isLowStock = product.stock <= (product.lowStockAlert || 10) && product.stock > 0;
+    // Ordenar produtos por quantidade vendida e pegar os 3 mais vendidos
+    const topProducts = products
+        .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
+        .slice(0, 3);
 
-        return `
-            <div class="product-select-card ${isOutOfStock ? 'out-of-stock' : ''}" data-product-id="${product.id}">
-                <div class="product-select-header">
-                    <h4 class="product-select-name">${product.name}</h4>
-                    <span class="product-select-price">${formatCurrency(product.price)}</span>
-                </div>
-                
-                <div class="product-select-info">
-                    <span class="product-category">${product.category}</span>
-                    <span class="product-stock ${isOutOfStock ? 'out' : isLowStock ? 'low' : 'available'}">
-                        ${product.stock} em estoque
-                    </span>
-                </div>
-
-                ${!isOutOfStock ? `
-                    <div class="product-select-actions">
-                        <div class="quantity-controls">
-                            <button class="quantity-btn" onclick="changeQuantity('${product.id}', -1)">-</button>
-                            <input type="number" 
-                                   id="qty-${product.id}" 
-                                   class="quantity-input" 
-                                   value="1" 
-                                   min="1" 
-                                   max="${product.stock}"
-                                   onchange="updateQuantity('${product.id}')">
-                            <button class="quantity-btn" onclick="changeQuantity('${product.id}', 1)">+</button>
+    container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            ${topProducts.map(product => `
+                <div class="product-select-card ${product.stock <= 0 ? 'out-of-stock' : ''}">
+                    <div class="product-select-header">
+                        <span class="product-select-name">${product.name}</span>
+                        <span class="product-select-price">${formatCurrency(product.price)}</span>
+                    </div>
+                    <div class="product-select-info">
+                        <span class="product-category">${product.category}</span>
+                        <span class="product-stock ${product.stock > 10 ? 'available' : product.stock > 0 ? 'low' : 'out'}">
+                            ${product.stock > 0 ? `${product.stock} em estoque` : 'Indisponível'}
+                        </span>
+                    </div>
+                    ${product.stock > 0 ? `
+                        <div class="product-select-actions">
+                            <div class="quantity-controls">
+                                <button class="quantity-btn" onclick="changeQuantity('${product.id}', -1)">-</button>
+                                <input type="number" 
+                                       class="quantity-input" 
+                                       value="1" 
+                                       min="1" 
+                                       max="${product.stock}"
+                                       onchange="updateQuantity('${product.id}')"
+                                       id="quantity-${product.id}">
+                                <button class="quantity-btn" onclick="changeQuantity('${product.id}', 1)">+</button>
+                            </div>
+                            <button class="btn-primary" onclick="toggleProductSelection('${product.id}')">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
                         </div>
-                        <button class="btn-primary btn-sm" onclick="toggleProductSelection('${product.id}')">
-                            <i class="fas fa-cart-plus mr-1"></i>
-                            Adicionar
+                    ` : `
+                        <button class="btn-secondary w-full" disabled>
+                            <i class="fas fa-times mr-2"></i>Indisponível
                         </button>
-                    </div>
-                ` : `
-                    <div class="product-select-actions">
-                        <button class="btn-secondary btn-sm w-full" disabled>
-                            <i class="fas fa-times mr-1"></i>
-                            Indisponível
-                        </button>
-                    </div>
-                `}
-            </div>
-        `;
-    }).join('');
+                    `}
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 function addSaleFormStyles() {
@@ -1546,14 +1544,11 @@ function renderRegisterSaleForm(container, currentUser) {
 
             <div class="customer-selection-card mb-6">
                 <div class="flex flex-col md:flex-row gap-4 items-start">
-                    <div class="flex-1 w-full">
-                        <div class="relative">
-                            <input type="text"
-                                   id="customerSearchInput"
-                                   class="form-input pl-10 w-full"
-                                   placeholder="Buscar cliente por nome, telefone ou email...">
-                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                        </div>
+                    <div class="flex-1 w-full relative">
+                        <input type="text"
+                               id="customerSearchInput"
+                               class="form-input w-full"
+                               placeholder="Digite o nome do cliente para buscar...">
                         <div id="customerSuggestions" class="customer-suggestions hidden"></div>
                     </div>
 
@@ -1785,7 +1780,7 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
         });
     }
 
-    // Busca de clientes com melhorias
+    // Busca de clientes melhorada
     const customerSearchInput = document.getElementById('customerSearchInput');
     if (customerSearchInput) {
         let searchTimeout;
@@ -1803,7 +1798,7 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
                 return;
             }
 
-            // Aguardar um pouco antes de fazer a busca
+            // Buscar sugestões após um pequeno delay
             searchTimeout = setTimeout(async () => {
                 if (typeof CRMService !== 'undefined' && typeof CRMService.searchCustomers === 'function') {
                     try {
@@ -1850,10 +1845,8 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
                             suggestionsContainer.classList.remove('hidden');
                         }
                     }
-                } else {
-                    console.warn("CRMService ou CRMService.searchCustomers não está definido.");
                 }
-            }, 300);
+            }, 200); // Reduzido para 200ms para resposta mais rápida
         });
 
         // Fechar sugestões ao clicar fora
