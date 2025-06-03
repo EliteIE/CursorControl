@@ -1544,128 +1544,96 @@ function addProductsConsultStyles() {
 // === VENDAS COM CLIENTE ===
 
 function renderRegisterSaleForm(container, currentUser) {
-    console.log("💰 Renderizando formulário de registro de venda com CRM");
-
     container.innerHTML = `
         <div class="register-sale-container">
-            <div class="page-header">
-                <div>
-                    <h2 class="page-title">Registrar Nova Venda</h2>
-                    <p class="page-subtitle">Selecione o cliente, produtos e quantidades</p>
-                </div>
-                <div class="header-info">
-                    <div class="user-info">
-                        <div class="user-details">
-                            <div class="user-name">${currentUser.name || currentUser.email}</div>
-                            <div class="user-email">${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
-                        </div>
+            <div class="sale-header">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-semibold text-slate-100">Registrar Nova Venda</h2>
+                        <p class="text-sm text-slate-400">Selecione o cliente, produtos e quantidades</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-slate-400">Vendedor: ${currentUser.name || currentUser.email}</p>
+                        <p class="text-sm text-slate-400" id="currentDateTime"></p>
                     </div>
                 </div>
             </div>
 
-            <div class="customer-selection-card mb-6">
-                <div class="flex items-center gap-4">
-                    <div class="flex-1 relative">
-                        <input type="text"
-                               id="customerSearchInput"
-                               class="form-input w-full"
-                               placeholder="Digite o nome do cliente para buscar...">
-                        <div id="customerSuggestions" class="customer-suggestions hidden"></div>
-                    </div>
+            <!-- A seção de busca de cliente será inserida aqui pelo initializeSaleFormWithCRM -->
 
-                    <button id="newCustomerButton" class="btn-secondary whitespace-nowrap">
-                        <i class="fas fa-user-plus mr-2"></i>
-                        Novo Cliente
+            <div class="selected-customer-info hidden" id="selectedCustomerInfo">
+                <div class="customer-card">
+                    <div class="customer-details">
+                        <h4 id="selectedCustomerName"></h4>
+                        <p class="text-sm text-slate-400" id="selectedCustomerPhone"></p>
+                        <p class="text-sm text-slate-400" id="selectedCustomerStats"></p>
+                    </div>
+                    <button class="btn-secondary btn-sm" id="removeCustomerButton">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
+            </div>
 
-                <div id="selectedCustomerInfo" class="selected-customer-info hidden mt-4">
-                    <div class="customer-card">
-                        <div class="customer-details">
-                            <h4 id="selectedCustomerName" class="font-semibold text-slate-100"></h4>
-                            <p id="selectedCustomerPhone" class="text-sm text-slate-400"></p>
-                            <p id="selectedCustomerStats" class="text-xs text-slate-500 mt-1"></p>
-                        </div>
-                        <button id="removeCustomerButton" class="btn-secondary btn-sm">
-                            <i class="fas fa-times"></i>
+            <div class="products-section mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-slate-100">Produtos Disponíveis</h3>
+                    <div class="search-container">
+                        <input type="text" 
+                               id="productSearchInput" 
+                               class="form-input" 
+                               placeholder="Buscar produtos...">
+                    </div>
+                </div>
+                <div class="products-grid" id="productsGrid"></div>
+            </div>
+
+            <div class="sale-items-section mt-6">
+                <h3 class="text-lg font-semibold text-slate-100 mb-4">Itens da Venda</h3>
+                <div id="cartItemsList"></div>
+                
+                <div id="cartSummary" class="hidden">
+                    <div class="flex justify-between items-center py-4 border-t border-slate-700">
+                        <span class="text-slate-300">Subtotal:</span>
+                        <span class="text-lg font-semibold text-slate-100" id="cartSubtotal">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between items-center py-4 border-t border-slate-700">
+                        <span class="text-slate-300">Total:</span>
+                        <span class="text-xl font-bold text-sky-400" id="cartTotal">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mt-6">
+                    <button class="btn-secondary" id="clearCartButton" style="display: none;">
+                        <i class="fas fa-trash-alt mr-2"></i>
+                        Limpar Carrinho
+                    </button>
+                    <div class="flex gap-4">
+                        <button class="btn-secondary" id="cancelSaleButton">
+                            <i class="fas fa-times mr-2"></i>
+                            Cancelar
+                        </button>
+                        <button class="btn-primary" id="finalizeSaleButton" disabled>
+                            <i class="fas fa-check mr-2"></i>
+                            Finalizar Venda
                         </button>
                     </div>
                 </div>
             </div>
-
-            <div class="products-selection-card mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-slate-100">
-                        <i class="fas fa-shopping-cart mr-2"></i>
-                        Selecionar Produtos
-                    </h3>
-                    <div class="relative">
-                        <input type="text"
-                               id="productSearchInput"
-                               class="form-input w-64"
-                               placeholder="Buscar produtos...">
-                    </div>
-                </div>
-
-                <div id="availableProductsList" class="products-grid">
-                    <div class="loading-products">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>
-                        Carregando produtos...
-                    </div>
-                </div>
-            </div>
-
-            <div class="cart-card mb-6">
-                <div class="cart-header">
-                    <h3 class="text-lg font-semibold text-slate-100">
-                        <i class="fas fa-receipt mr-2"></i>
-                        Itens da Venda
-                    </h3>
-                    <button id="clearCartButton" class="btn-secondary btn-sm" style="display: none;">
-                        <i class="fas fa-trash mr-1"></i>
-                        Limpar
-                    </button>
-                </div>
-
-                <div id="cartItemsList" class="cart-items">
-                    <div class="empty-cart">
-                        <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
-                        <p class="text-slate-400">Nenhum produto adicionado</p>
-                        <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
-                    </div>
-                </div>
-
-                <div id="cartSummary" class="cart-summary" style="display: none;">
-                    <div class="summary-row">
-                        <span>Subtotal:</span>
-                        <span id="cartSubtotal">R$ 0,00</span>
-                    </div>
-                    <div class="summary-row total-row">
-                        <span>Total:</span>
-                        <span id="cartTotal">R$ 0,00</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sale-actions">
-                <button id="cancelSaleButton" class="btn-secondary">
-                    <i class="fas fa-times mr-2"></i>
-                    Cancelar
-                </button>
-                <button id="finalizeSaleButton" class="btn-primary" disabled>
-                    <i class="fas fa-check mr-2"></i>
-                    Finalizar Venda
-                </button>
-            </div>
         </div>
     `;
 
-    // Aplicar estilos
-    addSaleFormStyles();
-    addCustomerStyles();
-
-    // Inicializar funcionalidades
+    // Inicializar o formulário com CRM
     initializeSaleFormWithCRM(currentUser);
+
+    // Carregar e renderizar produtos disponíveis
+    renderAvailableProducts(EliteControl.state.availableProducts || []);
+
+    // Atualizar hora atual
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 60000);
+
+    // Configurar event listeners
+    setupSaleFormWithCRMEventListeners(currentUser);
 }
 
 function addCustomerStyles() {
@@ -1786,526 +1754,204 @@ async function initializeSaleFormWithCRM(currentUser) {
 }
 
 function setupSaleFormWithCRMEventListeners(currentUser) {
-    // Busca de produtos
-    const productSearchInput = document.getElementById('productSearchInput');
-    if (productSearchInput) {
-        productSearchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredProducts = EliteControl.state.availableProducts.filter(product =>
-                product.name.toLowerCase().includes(searchTerm) ||
-                product.category.toLowerCase().includes(searchTerm)
-            );
-            renderAvailableProducts(filteredProducts);
-        });
-    }
+    const searchInput = document.querySelector('.customer-search-input');
+    const suggestionsContainer = document.querySelector('.customer-suggestions');
+    
+    if (!searchInput || !suggestionsContainer) return;
 
-    // Busca de clientes melhorada
-    const customerSearchInput = document.getElementById('customerSearchInput');
-    if (customerSearchInput) {
-        let searchTimeout;
-        customerSearchInput.addEventListener('input', async (e) => {
-            clearTimeout(searchTimeout);
-            const searchTerm = e.target.value.trim();
-            const suggestionsContainer = document.getElementById('customerSuggestions');
+    let debounceTimeout;
 
-            // Limpar sugestões se o campo estiver vazio
-            if (!searchTerm) {
-                if (suggestionsContainer) {
-                    suggestionsContainer.classList.add('hidden');
-                    suggestionsContainer.innerHTML = '';
-                }
-                return;
-            }
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimeout);
+        const query = e.target.value.trim();
 
-            // Buscar sugestões após um pequeno delay
-            searchTimeout = setTimeout(async () => {
-                if (typeof CRMService !== 'undefined' && typeof CRMService.searchCustomers === 'function') {
-                    try {
-                        const suggestions = await CRMService.searchCustomers(searchTerm);
-                        
-                        if (suggestionsContainer) {
-                            if (suggestions && suggestions.length > 0) {
-                                suggestionsContainer.innerHTML = suggestions.map(customer => `
-                                    <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
-                                        <div class="customer-suggestion-name">
-                                            ${customer.name}
-                                            ${customer.totalPurchases > 0 ? 
-                                                `<span class="text-sky-400 text-xs ml-2">${customer.totalPurchases} compras</span>` : 
-                                                '<span class="text-slate-500 text-xs ml-2">Novo cliente</span>'}
-                                        </div>
-                                        <div class="customer-suggestion-info">
-                                            ${customer.phone ? `<span class="mr-3"><i class="fas fa-phone-alt mr-1"></i>${customer.phone}</span>` : ''}
-                                            ${customer.email ? `<span><i class="fas fa-envelope mr-1"></i>${customer.email}</span>` : ''}
-                                        </div>
-                                    </div>
-                                `).join('');
-                                suggestionsContainer.classList.remove('hidden');
-                            } else {
-                                suggestionsContainer.innerHTML = `
-                                    <div class="p-4 text-center text-slate-400">
-                                        <p>Nenhum cliente encontrado</p>
-                                        <button class="btn-secondary btn-sm mt-2" onclick="showNewCustomerModal()">
-                                            <i class="fas fa-user-plus mr-2"></i>Cadastrar Novo
-                                        </button>
-                                    </div>
-                                `;
-                                suggestionsContainer.classList.remove('hidden');
-                            }
-                        }
-                    } catch (error) {
-                        console.error("❌ Erro na busca de clientes:", error);
-                        if (suggestionsContainer) {
-                            suggestionsContainer.innerHTML = `
-                                <div class="p-4 text-center text-red-400">
-                                    <p>Erro ao buscar clientes</p>
-                                    <p class="text-sm">Tente novamente</p>
-                                </div>
-                            `;
-                            suggestionsContainer.classList.remove('hidden');
-                        }
+        if (query.length < 2) {
+            suggestionsContainer.classList.add('hidden');
+            return;
+        }
+
+        debounceTimeout = setTimeout(async () => {
+            try {
+                const customersRef = collection(db, 'customers');
+                const q = query.toLowerCase();
+                
+                const querySnapshot = await getDocs(customersRef);
+                const suggestions = [];
+                
+                querySnapshot.forEach(doc => {
+                    const customer = { id: doc.id, ...doc.data() };
+                    if (
+                        customer.name.toLowerCase().includes(q) ||
+                        (customer.cpf && customer.cpf.includes(q)) ||
+                        (customer.email && customer.email.toLowerCase().includes(q))
+                    ) {
+                        suggestions.push(customer);
                     }
-                }
-            }, 200); // Reduzido para 200ms para resposta mais rápida
-        });
+                });
 
-        // Fechar sugestões ao clicar fora
-        document.addEventListener('click', (e) => {
-            const suggestionsContainer = document.getElementById('customerSuggestions');
-            if (suggestionsContainer && !customerSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.classList.add('hidden');
+                suggestionsContainer.classList.remove('hidden');
+                renderCustomerSuggestions(suggestions);
+            } catch (error) {
+                console.error('Erro ao buscar sugestões:', error);
+                showTemporaryAlert('Erro ao buscar clientes', 'error');
             }
-        });
-    }
+        }, 300);
+    });
 
-    // Novo cliente
-    const newCustomerButton = document.getElementById('newCustomerButton');
-    if (newCustomerButton) {
-        newCustomerButton.addEventListener('click', () => showNewCustomerModal());
-    }
+    // Fechar sugestões ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
 
-    // Remover cliente selecionado
-    const removeCustomerButton = document.getElementById('removeCustomerButton');
-    if (removeCustomerButton) {
-        removeCustomerButton.addEventListener('click', () => {
-            EliteControl.state.selectedCustomer = null;
-            const custSearchInput = document.getElementById('customerSearchInput');
-            if(custSearchInput) custSearchInput.value = '';
-            const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-            if(selectedCustInfo) selectedCustInfo.classList.add('hidden');
-            updateFinalizeSaleButton();
-        });
-    }
-
-    // Limpar carrinho
-    const clearCartButton = document.getElementById('clearCartButton');
-    if (clearCartButton) {
-        clearCartButton.addEventListener('click', clearCart);
-    }
-
-    // Cancelar venda
-    const cancelButton = document.getElementById('cancelSaleButton');
-    if (cancelButton) {
-        cancelButton.addEventListener('click', () => {
-            if (EliteControl.state.saleCart.length > 0 || EliteControl.state.selectedCustomer) {
-                showCustomConfirm(
-                    'Tem certeza que deseja cancelar esta venda? Todos os dados serão perdidos.',
-                    () => {
-                        clearCart();
-                        EliteControl.state.selectedCustomer = null;
-                        const custSearchInput = document.getElementById('customerSearchInput');
-                        if(custSearchInput) custSearchInput.value = '';
-                        const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-                        if(selectedCustInfo) selectedCustInfo.classList.add('hidden');
-                        showTemporaryAlert('Venda cancelada', 'info');
-                    }
-                );
-            } else {
-                showTemporaryAlert('Nenhuma venda para cancelar', 'info');
-            }
-        });
-    }
-
-    // Finalizar venda
-    const finalizeButton = document.getElementById('finalizeSaleButton');
-    if (finalizeButton) {
-        finalizeButton.addEventListener('click', () => finalizeSaleWithCustomer(currentUser));
-    }
+    // Mostrar sugestões ao focar no input
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+            suggestionsContainer.classList.remove('hidden');
+        }
+    });
 }
 
 function renderCustomerSuggestions(suggestions) {
-    const container = document.getElementById('customerSuggestions');
+    const container = document.querySelector('.customer-suggestions');
     if (!container) return;
 
-    if (suggestions.length === 0) {
+    if (!suggestions || suggestions.length === 0) {
         container.innerHTML = `
             <div class="customer-suggestion-item">
-                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
+                <div class="customer-suggestion-name">Nenhum cliente encontrado</div>
             </div>
         `;
-    } else {
-        container.innerHTML = suggestions.map(customer => `
-            <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
-                <div class="customer-suggestion-name">${customer.name}</div>
-                <div class="customer-suggestion-info">
-                    ${customer.phone} ${customer.email ? '• ' + customer.email : ''}
-                </div>
-            </div>
-        `).join('');
+        return;
     }
 
-    container.classList.remove('hidden');
-}
-
-async function selectCustomer(customerId) {
-    try {
-        if (typeof CRMService === 'undefined' || typeof CRMService.getCustomerById !== 'function') {
-            console.warn("CRMService ou CRMService.getCustomerById não está definido.");
-            showTemporaryAlert("Erro: Serviço de cliente indisponível.", "error");
-            return;
-        }
-        const customer = await CRMService.getCustomerById(customerId);
-        if (customer) {
-            EliteControl.state.selectedCustomer = customer;
-
-            // Atualizar UI
-            const custSearchInput = document.getElementById('customerSearchInput');
-            if(custSearchInput) custSearchInput.value = customer.name;
-
-            const custSuggestions = document.getElementById('customerSuggestions');
-            if(custSuggestions) custSuggestions.classList.add('hidden');
-
-            const selectedCustName = document.getElementById('selectedCustomerName');
-            if(selectedCustName) selectedCustName.textContent = customer.name;
-
-            const selectedCustPhone = document.getElementById('selectedCustomerPhone');
-            if(selectedCustPhone) selectedCustPhone.textContent = customer.phone;
-
-            // Mostrar estatísticas se disponíveis
-            const stats = customer.totalPurchases > 0 ?
-                `${customer.totalPurchases} compras • Total: ${formatCurrency(customer.totalSpent)}` :
-                'Novo cliente';
-            const selectedCustStats = document.getElementById('selectedCustomerStats');
-            if(selectedCustStats) selectedCustStats.textContent = stats;
-
-            const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-            if(selectedCustInfo) selectedCustInfo.classList.remove('hidden');
-
-            updateFinalizeSaleButton();
-        }
-    } catch (error) {
-        console.error("❌ Erro ao selecionar cliente:", error);
-        showTemporaryAlert("Erro ao carregar dados do cliente", "error");
-    }
-}
-
-function showNewCustomerModal() {
-    const modal = document.createElement('div');
-    modal.className = 'customer-modal';
-    modal.innerHTML = `
-        <div class="customer-modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Novo Cliente</h3>
-                <button class="modal-close" onclick="this.closest('.customer-modal').remove()">
-                    &times;
-                </button>
+    container.innerHTML = suggestions.map(customer => `
+        <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
+            <div class="customer-suggestion-name">
+                ${customer.name}
+                <span class="text-sm text-sky-400">${customer.cpf || ''}</span>
             </div>
-
-            <form id="newCustomerForm" class="modal-body">
-                <div class="form-group">
-                    <label for="customerName" class="form-label">Nome *</label>
-                    <input type="text"
-                           id="customerName"
-                           class="form-input"
-                           placeholder="Nome completo"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerPhone" class="form-label">Telefone *</label>
-                    <input type="tel"
-                           id="customerPhone"
-                           class="form-input"
-                           placeholder="(00) 00000-0000"
-                           required>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerEmail" class="form-label">Email</label>
-                    <input type="email"
-                           id="customerEmail"
-                           class="form-input"
-                           placeholder="email@exemplo.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="customerCPF" class="form-label">CPF</label>
-                    <input type="text"
-                           id="customerCPF"
-                           class="form-input"
-                           placeholder="000.000.000-00">
-                </div>
-
-                <div class="form-group">
-                    <label for="customerAddress" class="form-label">Endereço</label>
-                    <textarea id="customerAddress"
-                              class="form-input"
-                              rows="2"
-                              placeholder="Endereço completo"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="customerBirthdate" class="form-label">Data de Nascimento</label>
-                    <input type="date"
-                           id="customerBirthdate"
-                           class="form-input">
-                </div>
-            </form>
-
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="this.closest('.customer-modal').remove()">
-                    Cancelar
-                </button>
-                <button class="btn-primary" onclick="saveNewCustomer()">
-                    <i class="fas fa-save mr-2"></i>
-                    Salvar Cliente
-                </button>
+            <div class="customer-suggestion-info">
+                <span>${customer.email || 'Sem email'}</span>
+                <span>${customer.phone || 'Sem telefone'}</span>
             </div>
         </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Focar no primeiro campo
-    setTimeout(() => {
-      const customerNameInput = document.getElementById('customerName');
-      if (customerNameInput) customerNameInput.focus();
-    }, 100);
-
-    // Máscara de telefone
-    const phoneInput = document.getElementById('customerPhone');
-    if (phoneInput) {
-        phoneInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 11) value = value.substring(0, 11);
-
-            if (value.length > 6) {
-                value = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7)}`;
-            } else if (value.length > 2) {
-                value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
-            }
-
-            e.target.value = value;
-        });
-    }
-
-    // Máscara de CPF
-    const cpfInput = document.getElementById('customerCPF');
-    if (cpfInput) {
-        cpfInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 11) value = value.substring(0, 11);
-
-            if (value.length > 9) {
-                value = `${value.substring(0, 3)}.${value.substring(3, 6)}.${value.substring(6, 9)}-${value.substring(9)}`;
-            } else if (value.length > 6) {
-                value = `${value.substring(0, 3)}.${value.substring(3, 6)}.${value.substring(6)}`;
-            } else if (value.length > 3) {
-                value = `${value.substring(0, 3)}.${value.substring(3)}`;
-            }
-
-            e.target.value = value;
-        });
-    }
+    `).join('');
 }
 
-async function saveNewCustomer() {
-    const form = document.getElementById('newCustomerForm');
-    if (!form || !form.checkValidity()) {
-        if(form) form.reportValidity();
+function renderCustomerSuggestions(suggestions) {
+    const container = document.querySelector('.customer-suggestions');
+    if (!container) return;
+
+    if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = `
+            <div class="customer-suggestion-item">
+                <div class="customer-suggestion-name">Nenhum cliente encontrado</div>
+            </div>
+        `;
         return;
     }
 
-    const customerData = {
-        name: document.getElementById('customerName').value.trim(),
-        phone: document.getElementById('customerPhone').value.replace(/\D/g, ''),
-        email: document.getElementById('customerEmail').value.trim(),
-        cpf: document.getElementById('customerCPF').value.replace(/\D/g, ''),
-        address: document.getElementById('customerAddress').value.trim(),
-        birthdate: document.getElementById('customerBirthdate').value
-    };
+    container.innerHTML = suggestions.map(customer => `
+        <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
+            <div class="customer-suggestion-name">
+                ${customer.name}
+                <span class="text-sm text-sky-400">${customer.cpf || ''}</span>
+            </div>
+            <div class="customer-suggestion-info">
+                <span>${customer.email || 'Sem email'}</span>
+                <span>${customer.phone || 'Sem telefone'}</span>
+            </div>
+        </div>
+    `).join('');
+}
 
-    try {
-        if (typeof CRMService === 'undefined' || typeof CRMService.createOrUpdateCustomer !== 'function') {
-            console.warn("CRMService ou CRMService.createOrUpdateCustomer não está definido.");
-            showTemporaryAlert("Erro: Serviço de cliente indisponível para salvar.", "error");
+function initializeSaleFormWithCRM(currentUser) {
+    const container = document.querySelector('.register-sale-container');
+    if (!container) return;
+
+    // Adiciona a seção de pesquisa de cliente
+    const customerSearchSection = document.createElement('div');
+    customerSearchSection.className = 'customer-search-container';
+    customerSearchSection.innerHTML = `
+        <div class="relative">
+            <input type="text" 
+                   class="customer-search-input" 
+                   placeholder="Buscar cliente por nome, CPF ou email..."
+                   autocomplete="off">
+            <div class="customer-suggestions hidden"></div>
+        </div>
+        <button class="btn-primary mt-2" onclick="showNewCustomerModal()">
+            <i class="fas fa-user-plus mr-2"></i>
+            Novo Cliente
+        </button>
+    `;
+
+    // Insere a seção de pesquisa no início do container
+    container.insertBefore(customerSearchSection, container.firstChild);
+
+    setupSaleFormWithCRMEventListeners(currentUser);
+}
+
+function setupSaleFormWithCRMEventListeners(currentUser) {
+    const searchInput = document.querySelector('.customer-search-input');
+    const suggestionsContainer = document.querySelector('.customer-suggestions');
+    
+    if (!searchInput || !suggestionsContainer) return;
+
+    let debounceTimeout;
+
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimeout);
+        const query = e.target.value.trim();
+
+        if (query.length < 2) {
+            suggestionsContainer.classList.add('hidden');
             return;
         }
-        const newCustomer = await CRMService.createOrUpdateCustomer(customerData);
 
-        // Selecionar o novo cliente
-        await selectCustomer(newCustomer.id);
+        debounceTimeout = setTimeout(async () => {
+            try {
+                const customersRef = collection(db, 'customers');
+                const q = query.toLowerCase();
+                
+                const querySnapshot = await getDocs(customersRef);
+                const suggestions = [];
+                
+                querySnapshot.forEach(doc => {
+                    const customer = { id: doc.id, ...doc.data() };
+                    if (
+                        customer.name.toLowerCase().includes(q) ||
+                        (customer.cpf && customer.cpf.includes(q)) ||
+                        (customer.email && customer.email.toLowerCase().includes(q))
+                    ) {
+                        suggestions.push(customer);
+                    }
+                });
 
-        // Fechar modal
-        const customerModal = document.querySelector('.customer-modal');
-        if (customerModal) customerModal.remove();
-
-        showTemporaryAlert('Cliente cadastrado com sucesso!', 'success');
-
-    } catch (error) {
-        console.error("❌ Erro ao criar cliente:", error);
-        showTemporaryAlert('Erro ao cadastrar cliente. Verifique os dados.', 'error');
-    }
-}
-
-async function finalizeSaleWithCustomer(currentUser) {
-    if (EliteControl.state.saleCart.length === 0) {
-        showTemporaryAlert('Adicione produtos à venda primeiro', 'warning');
-        return;
-    }
-
-    const finalizeButton = document.getElementById('finalizeSaleButton');
-    if (!finalizeButton) return;
-    const originalText = finalizeButton.textContent;
-
-    // Desabilitar botão e mostrar loading
-    finalizeButton.disabled = true;
-    finalizeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processando...';
-
-    try {
-        // Validar estoque
-        for (const item of EliteControl.state.saleCart) {
-            const currentProduct = await DataService.getProductById(item.productId);
-            if (!currentProduct) {
-                throw new Error(`Produto ${item.name} não encontrado`);
+                suggestionsContainer.classList.remove('hidden');
+                renderCustomerSuggestions(suggestions);
+            } catch (error) {
+                console.error('Erro ao buscar sugestões:', error);
+                showTemporaryAlert('Erro ao buscar clientes', 'error');
             }
-            if (currentProduct.stock < item.quantity) {
-                throw new Error(`Estoque insuficiente para ${item.name}. Disponível: ${currentProduct.stock}`);
-            }
-        }
-
-        // Preparar dados da venda
-        const saleData = {
-            date: new Date().toISOString(),
-            dateString: new Date().toISOString().split('T')[0]
-        };
-
-        const productsDetail = EliteControl.state.saleCart.map(item => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: item.price
-        }));
-
-        const sellerName = currentUser.name || currentUser.email;
-
-        // Registrar venda com cliente
-        const newSale = await DataService.addSale(saleData, productsDetail, sellerName, EliteControl.state.selectedCustomer);
-
-        // Limpar carrinho e cliente
-        EliteControl.state.saleCart = [];
-        EliteControl.state.selectedCustomer = null;
-        updateSaleInterface();
-
-        const custSearchInput = document.getElementById('customerSearchInput');
-        if(custSearchInput) custSearchInput.value = '';
-        const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-        if(selectedCustInfo) selectedCustInfo.classList.add('hidden');
-
-        // Recarregar produtos
-        EliteControl.state.availableProducts = await DataService.getProducts();
-        renderAvailableProducts(EliteControl.state.availableProducts);
-
-        // Mostrar sucesso
-        showSaleSuccessModal(newSale);
-
-        console.log("✅ Venda finalizada com sucesso:", newSale);
-
-    } catch (error) {
-        console.error("❌ Erro ao finalizar venda:", error);
-        showTemporaryAlert(`Erro ao finalizar venda: ${error.message}`, 'error');
-    } finally {
-        // Restaurar botão
-        finalizeButton.disabled = false;
-        finalizeButton.innerHTML = originalText;
-    }
-}
-
-// === FUNÇÕES DE VENDA ===
-
-function renderSalesList(sales, container, userRole, isPersonal = false) {
-    console.log(`💰 Renderizando ${isPersonal ? 'minhas vendas' : 'lista de vendas'}:`, sales.length);
-
-    container.innerHTML = '';
-
-    // Título
-    const title = document.createElement('h2');
-    title.className = 'text-xl font-semibold text-slate-100 mb-4';
-    title.textContent = isPersonal ? 'Minhas Vendas' : 'Histórico de Vendas';
-    container.appendChild(title);
-
-    // Verificar se há vendas
-    if (!sales || sales.length === 0) {
-        const noSalesMsg = document.createElement('div');
-        noSalesMsg.className = 'text-center py-8 text-slate-400';
-        noSalesMsg.innerHTML = `
-            <i class="fas fa-receipt fa-3x mb-4"></i>
-            <p>${isPersonal ? 'Você ainda não realizou nenhuma venda.' : 'Nenhuma venda encontrada.'}</p>
-            ${isPersonal ? '<p class="text-sm mt-2">Comece registrando sua primeira venda!</p>' : ''}
-        `;
-        container.appendChild(noSalesMsg);
-        return;
-    }
-
-    // Tabela de vendas
-    const table = createSalesTable(sales, isPersonal);
-    container.appendChild(table);
-}
-
-function createSalesTable(sales, isPersonal = false) {
-    const table = document.createElement('table');
-    table.className = 'min-w-full bg-slate-800 shadow-md rounded-lg overflow-hidden';
-
-    // Cabeçalho
-    const thead = document.createElement('thead');
-    thead.className = 'bg-slate-700';
-    thead.innerHTML = `
-        <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Data</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Cliente</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Produtos</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Total</th>
-            ${!isPersonal ? '<th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Vendedor</th>' : ''}
-        </tr>
-    `;
-    table.appendChild(thead);
-
-    // Corpo da tabela
-    const tbody = document.createElement('tbody');
-    tbody.className = 'divide-y divide-slate-700';
-
-    sales.forEach(sale => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-750 transition-colors duration-150';
-
-        const productNames = sale.productsDetail && Array.isArray(sale.productsDetail) && sale.productsDetail.length > 0
-            ? sale.productsDetail.map(p => `${p.name} (x${p.quantity})`).join(', ')
-            : 'N/A';
-
-        const customerInfo = sale.customerName || 'Cliente não identificado';
-
-        tr.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">${formatDate(sale.date)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-200">${customerInfo}</td>
-            <td class="px-6 py-4 text-sm text-slate-200" title="${productNames}">${truncateText(productNames, 50)}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300 font-semibold">${formatCurrency(sale.total)}</td>
-            ${!isPersonal ? `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">${sale.sellerName || 'N/A'}</td>` : ''}
-        `;
-
-        tbody.appendChild(tr);
+        }, 300);
     });
 
-    table.appendChild(tbody);
-    return table;
+    // Fechar sugestões ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+
+    // Mostrar sugestões ao focar no input
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+            suggestionsContainer.classList.remove('hidden');
+        }
+    });
 }
 
 // === SEÇÃO DE CLIENTES ===
@@ -2717,14 +2363,6 @@ function showCustomerModal(customerId = null) {
                     <input type="date"
                            id="customerBirthdate"
                            class="form-input">
-                </div>
-
-                <div class="form-group">
-                    <label for="customerNotes" class="form-label">Observações</label>
-                    <textarea id="customerNotes"
-                              class="form-input"
-                              rows="3"
-                              placeholder="Observações sobre o cliente"></textarea>
                 </div>
             </form>
 
