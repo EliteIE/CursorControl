@@ -1040,9 +1040,10 @@ function updateCartDisplay() {
 }
 
 function updateCurrentTime() {
-    const timeElement = document.getElementById('currentTime');
-    if (timeElement) {
-        timeElement.textContent = new Date().toLocaleTimeString('pt-BR');
+    const dateTimeElement = document.getElementById('currentDateTime');
+    if (dateTimeElement) {
+        const now = new Date();
+        dateTimeElement.textContent = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
     }
 }
 
@@ -1532,63 +1533,46 @@ function renderRegisterSaleForm(container, currentUser) {
 
     container.innerHTML = `
         <div class="register-sale-container">
-            <div class="sale-header">
-                <h2 class="text-xl font-semibold text-slate-100 mb-2">Registrar Nova Venda</h2>
-                <p class="text-slate-400 mb-6">Selecione o cliente, produtos e quantidades</p>
-            </div>
-
-            <div class="sale-info-card mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="info-item">
-                        <label class="info-label">Vendedor</label>
-                        <div class="info-value">${currentUser.name || currentUser.email}</div>
-                    </div>
-                    <div class="info-item">
-                        <label class="info-label">Data</label>
-                        <div class="info-value">${new Date().toLocaleDateString('pt-BR')}</div>
-                    </div>
-                    <div class="info-item">
-                        <label class="info-label">Hora</label>
-                        <div class="info-value" id="currentTime">${new Date().toLocaleTimeString('pt-BR')}</div>
-                    </div>
+            <div class="sale-header flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-slate-100">Registrar Nova Venda</h2>
+                    <p class="text-slate-400 mt-1">Selecione o cliente, produtos e quantidades</p>
+                </div>
+                <div class="text-right text-sm text-slate-400">
+                    <div>${currentUser.name || currentUser.email}</div>
+                    <div id="currentDateTime">${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
                 </div>
             </div>
 
             <div class="customer-selection-card mb-6">
-                <h3 class="text-lg font-semibold text-slate-100 mb-4">
-                    <i class="fas fa-user mr-2"></i>
-                    Cliente (Opcional)
-                </h3>
-
-                <div class="customer-search-container">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col md:flex-row gap-4 items-start">
+                    <div class="flex-1 w-full">
                         <div class="relative">
                             <input type="text"
                                    id="customerSearchInput"
-                                   class="form-input pl-10"
-                                   placeholder="Buscar cliente por nome ou telefone...">
+                                   class="form-input pl-10 w-full"
+                                   placeholder="Buscar cliente por nome, telefone ou email...">
                             <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                         </div>
-
-                        <button id="newCustomerButton" class="btn-secondary">
-                            <i class="fas fa-user-plus mr-2"></i>
-                            Novo Cliente
-                        </button>
+                        <div id="customerSuggestions" class="customer-suggestions hidden"></div>
                     </div>
 
-                    <div id="customerSuggestions" class="customer-suggestions hidden"></div>
+                    <button id="newCustomerButton" class="btn-secondary whitespace-nowrap">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        Novo Cliente
+                    </button>
+                </div>
 
-                    <div id="selectedCustomerInfo" class="selected-customer-info hidden">
-                        <div class="customer-card">
-                            <div class="customer-details">
-                                <h4 id="selectedCustomerName" class="font-semibold text-slate-100"></h4>
-                                <p id="selectedCustomerPhone" class="text-sm text-slate-400"></p>
-                                <p id="selectedCustomerStats" class="text-xs text-slate-500 mt-1"></p>
-                            </div>
-                            <button id="removeCustomerButton" class="btn-secondary btn-sm">
-                                <i class="fas fa-times"></i>
-                            </button>
+                <div id="selectedCustomerInfo" class="selected-customer-info hidden mt-4">
+                    <div class="customer-card">
+                        <div class="customer-details">
+                            <h4 id="selectedCustomerName" class="font-semibold text-slate-100"></h4>
+                            <p id="selectedCustomerPhone" class="text-sm text-slate-400"></p>
+                            <p id="selectedCustomerStats" class="text-xs text-slate-500 mt-1"></p>
                         </div>
+                        <button id="removeCustomerButton" class="btn-secondary btn-sm">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1604,7 +1588,7 @@ function renderRegisterSaleForm(container, currentUser) {
                         <input type="text"
                                id="productSearchInput"
                                class="form-input pl-10"
-                               placeholder="Buscar produtos...">
+                               placeholder="Buscar produtos por nome ou categoria...">
                         <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                     </div>
                 </div>
@@ -1801,28 +1785,83 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
         });
     }
 
-    // Busca de clientes
+    // Busca de clientes com melhorias
     const customerSearchInput = document.getElementById('customerSearchInput');
     if (customerSearchInput) {
         let searchTimeout;
         customerSearchInput.addEventListener('input', async (e) => {
             clearTimeout(searchTimeout);
             const searchTerm = e.target.value.trim();
+            const suggestionsContainer = document.getElementById('customerSuggestions');
 
-            if (searchTerm.length < 2) {
-                const suggestionsContainer = document.getElementById('customerSuggestions');
-                if (suggestionsContainer) suggestionsContainer.classList.add('hidden');
+            // Limpar sugestões se o campo estiver vazio
+            if (!searchTerm) {
+                if (suggestionsContainer) {
+                    suggestionsContainer.classList.add('hidden');
+                    suggestionsContainer.innerHTML = '';
+                }
                 return;
             }
 
+            // Aguardar um pouco antes de fazer a busca
             searchTimeout = setTimeout(async () => {
                 if (typeof CRMService !== 'undefined' && typeof CRMService.searchCustomers === 'function') {
-                    const suggestions = await CRMService.searchCustomers(searchTerm);
-                    renderCustomerSuggestions(suggestions);
+                    try {
+                        const suggestions = await CRMService.searchCustomers(searchTerm);
+                        
+                        if (suggestionsContainer) {
+                            if (suggestions && suggestions.length > 0) {
+                                suggestionsContainer.innerHTML = suggestions.map(customer => `
+                                    <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
+                                        <div class="customer-suggestion-name">
+                                            ${customer.name}
+                                            ${customer.totalPurchases > 0 ? 
+                                                `<span class="text-sky-400 text-xs ml-2">${customer.totalPurchases} compras</span>` : 
+                                                '<span class="text-slate-500 text-xs ml-2">Novo cliente</span>'}
+                                        </div>
+                                        <div class="customer-suggestion-info">
+                                            ${customer.phone ? `<span class="mr-3"><i class="fas fa-phone-alt mr-1"></i>${customer.phone}</span>` : ''}
+                                            ${customer.email ? `<span><i class="fas fa-envelope mr-1"></i>${customer.email}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('');
+                                suggestionsContainer.classList.remove('hidden');
+                            } else {
+                                suggestionsContainer.innerHTML = `
+                                    <div class="p-4 text-center text-slate-400">
+                                        <p>Nenhum cliente encontrado</p>
+                                        <button class="btn-secondary btn-sm mt-2" onclick="showNewCustomerModal()">
+                                            <i class="fas fa-user-plus mr-2"></i>Cadastrar Novo
+                                        </button>
+                                    </div>
+                                `;
+                                suggestionsContainer.classList.remove('hidden');
+                            }
+                        }
+                    } catch (error) {
+                        console.error("❌ Erro na busca de clientes:", error);
+                        if (suggestionsContainer) {
+                            suggestionsContainer.innerHTML = `
+                                <div class="p-4 text-center text-red-400">
+                                    <p>Erro ao buscar clientes</p>
+                                    <p class="text-sm">Tente novamente</p>
+                                </div>
+                            `;
+                            suggestionsContainer.classList.remove('hidden');
+                        }
+                    }
                 } else {
                     console.warn("CRMService ou CRMService.searchCustomers não está definido.");
                 }
             }, 300);
+        });
+
+        // Fechar sugestões ao clicar fora
+        document.addEventListener('click', (e) => {
+            const suggestionsContainer = document.getElementById('customerSuggestions');
+            if (suggestionsContainer && !customerSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.classList.add('hidden');
+            }
         });
     }
 
