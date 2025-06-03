@@ -1544,128 +1544,156 @@ function addProductsConsultStyles() {
 // === VENDAS COM CLIENTE ===
 
 function renderRegisterSaleForm(container, currentUser) {
-    console.log("💰 Renderizando formulário de registro de venda com CRM");
-
     container.innerHTML = `
         <div class="register-sale-container">
-            <div class="page-header">
-                <div>
-                    <h2 class="page-title">Registrar Nova Venda</h2>
-                    <p class="page-subtitle">Selecione o cliente, produtos e quantidades</p>
-                </div>
-                <div class="header-info">
-                    <div class="user-info">
-                        <div class="user-details">
-                            <div class="user-name">${currentUser.name || currentUser.email}</div>
-                            <div class="user-email">${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
-                        </div>
+            <div class="page-header mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-slate-100">Registrar Nova Venda</h2>
+                        <p class="text-sm text-slate-400">Selecione o cliente, produtos e quantidades</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-slate-400">Vendedor: ${currentUser.name || currentUser.email}</p>
+                        <p class="text-sm text-slate-400" id="currentDateTime"></p>
                     </div>
                 </div>
             </div>
 
-            <div class="customer-selection-card mb-6">
-                <div class="flex items-center gap-4">
-                    <div class="flex-1 relative">
+            <div class="customer-selection-section mb-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="customer-search-container flex-1">
                         <input type="text"
                                id="customerSearchInput"
-                               class="form-input w-full"
+                               class="form-input w-full py-3 pl-4 pr-10 bg-slate-800 border border-slate-700 rounded-lg"
                                placeholder="Digite o nome do cliente para buscar...">
                         <div id="customerSuggestions" class="customer-suggestions hidden"></div>
                     </div>
-
-                    <button id="newCustomerButton" class="btn-secondary whitespace-nowrap">
+                    <button id="newCustomerButton" class="btn-primary">
                         <i class="fas fa-user-plus mr-2"></i>
                         Novo Cliente
                     </button>
                 </div>
 
-                <div id="selectedCustomerInfo" class="selected-customer-info hidden mt-4">
-                    <div class="customer-card">
-                        <div class="customer-details">
-                            <h4 id="selectedCustomerName" class="font-semibold text-slate-100"></h4>
-                            <p id="selectedCustomerPhone" class="text-sm text-slate-400"></p>
-                            <p id="selectedCustomerStats" class="text-xs text-slate-500 mt-1"></p>
+                <div id="selectedCustomerInfo" class="selected-customer-info hidden">
+                    <div class="customer-card bg-slate-800 border border-slate-700 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 id="selectedCustomerName" class="text-lg font-semibold text-slate-100"></h4>
+                                <p id="selectedCustomerPhone" class="text-sm text-slate-400 mt-1"></p>
+                                <p id="selectedCustomerStats" class="text-sm text-slate-500 mt-1"></p>
+                            </div>
+                            <button id="removeCustomerButton" class="text-slate-400 hover:text-red-400 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <button id="removeCustomerButton" class="btn-secondary btn-sm">
-                            <i class="fas fa-times"></i>
-                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="products-selection-card mb-6">
-                <div class="flex items-center justify-between mb-4">
+            <div class="products-section">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-slate-100">
                         <i class="fas fa-shopping-cart mr-2"></i>
-                        Selecionar Produtos
+                        Produtos Disponíveis
                     </h3>
-                    <div class="relative">
-                        <input type="text"
-                               id="productSearchInput"
-                               class="form-input w-64"
+                    <div class="search-container relative">
+                        <input type="text" 
+                               id="productSearchInput" 
+                               class="form-input w-64 py-2 pl-4 pr-10 bg-slate-800 border border-slate-700 rounded-lg"
                                placeholder="Buscar produtos...">
                     </div>
                 </div>
 
-                <div id="availableProductsList" class="products-grid">
-                    <div class="loading-products">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>
-                        Carregando produtos...
-                    </div>
-                </div>
+                <div id="availableProductsList" class="products-grid"></div>
             </div>
 
-            <div class="cart-card mb-6">
-                <div class="cart-header">
+            <div class="cart-section mt-6">
+                <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-slate-100">
                         <i class="fas fa-receipt mr-2"></i>
                         Itens da Venda
                     </h3>
                     <button id="clearCartButton" class="btn-secondary btn-sm" style="display: none;">
-                        <i class="fas fa-trash mr-1"></i>
+                        <i class="fas fa-trash-alt mr-2"></i>
                         Limpar
                     </button>
                 </div>
-
-                <div id="cartItemsList" class="cart-items">
-                    <div class="empty-cart">
+                
+                <div id="cartItemsList" class="cart-items space-y-3 mb-6">
+                    <div class="empty-cart text-center py-8">
                         <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
                         <p class="text-slate-400">Nenhum produto adicionado</p>
                         <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
                     </div>
                 </div>
 
-                <div id="cartSummary" class="cart-summary" style="display: none;">
-                    <div class="summary-row">
-                        <span>Subtotal:</span>
-                        <span id="cartSubtotal">R$ 0,00</span>
+                <div id="cartSummary" class="cart-summary border-t border-slate-700 pt-4" style="display: none;">
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-slate-400">Subtotal:</span>
+                        <span id="cartSubtotal" class="text-lg font-semibold text-slate-100">R$ 0,00</span>
                     </div>
-                    <div class="summary-row total-row">
-                        <span>Total:</span>
-                        <span id="cartTotal">R$ 0,00</span>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-slate-400">Total:</span>
+                        <span id="cartTotal" class="text-xl font-bold text-sky-400">R$ 0,00</span>
                     </div>
                 </div>
-            </div>
 
-            <div class="sale-actions">
-                <button id="cancelSaleButton" class="btn-secondary">
-                    <i class="fas fa-times mr-2"></i>
-                    Cancelar
-                </button>
-                <button id="finalizeSaleButton" class="btn-primary" disabled>
-                    <i class="fas fa-check mr-2"></i>
-                    Finalizar Venda
-                </button>
+                <div class="flex justify-between items-center mt-6">
+                    <button id="cancelSaleButton" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button id="finalizeSaleButton" class="btn-primary" disabled>
+                        <i class="fas fa-check mr-2"></i>
+                        Finalizar Venda
+                    </button>
+                </div>
             </div>
         </div>
     `;
 
-    // Aplicar estilos
-    addSaleFormStyles();
-    addCustomerStyles();
-
     // Inicializar funcionalidades
-    initializeSaleFormWithCRM(currentUser);
+    setupSaleFormEventListeners(currentUser);
+    
+    // Carregar e renderizar produtos disponíveis
+    renderAvailableProducts(EliteControl.state.availableProducts || []);
+
+    // Atualizar hora atual
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 60000);
+}
+
+function renderCustomerSuggestions(suggestions) {
+    const container = document.getElementById('customerSuggestions');
+    if (!container) return;
+
+    if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = `
+            <div class="customer-suggestion-item">
+                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
+            </div>
+        `;
+        container.classList.remove('hidden');
+        return;
+    }
+
+    container.innerHTML = suggestions.map(customer => `
+        <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
+            <div class="customer-suggestion-name">
+                ${customer.name}
+                ${customer.totalPurchases > 0 ? 
+                    `<span class="text-sky-400 text-xs">${customer.totalPurchases} compras</span>` : ''}
+            </div>
+            <div class="customer-suggestion-info">
+                ${customer.phone ? 
+                    `<span><i class="fas fa-phone text-slate-500 mr-1"></i>${customer.phone}</span>` : ''}
+                ${customer.email ? 
+                    `<span><i class="fas fa-envelope text-slate-500 mr-1"></i>${customer.email}</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    container.classList.remove('hidden');
 }
 
 function addCustomerStyles() {
@@ -1958,43 +1986,48 @@ function renderCustomerSuggestions(suggestions) {
 
 async function selectCustomer(customerId) {
     try {
-        if (typeof CRMService === 'undefined' || typeof CRMService.getCustomerById !== 'function') {
-            console.warn("CRMService ou CRMService.getCustomerById não está definido.");
-            showTemporaryAlert("Erro: Serviço de cliente indisponível.", "error");
+        const doc = await firebase.firestore().collection('customers').doc(customerId).get();
+        if (!doc.exists) {
+            showTemporaryAlert('Cliente não encontrado.', 'error');
             return;
         }
-        const customer = await CRMService.getCustomerById(customerId);
-        if (customer) {
-            EliteControl.state.selectedCustomer = customer;
 
-            // Atualizar UI
-            const custSearchInput = document.getElementById('customerSearchInput');
-            if(custSearchInput) custSearchInput.value = customer.name;
+        const customer = { id: doc.id, ...doc.data() };
+        EliteControl.state.selectedCustomer = customer;
 
-            const custSuggestions = document.getElementById('customerSuggestions');
-            if(custSuggestions) custSuggestions.classList.add('hidden');
+        // Atualizar interface
+        const selectedCustomerInfo = document.getElementById('selectedCustomerInfo');
+        const customerName = document.getElementById('selectedCustomerName');
+        const customerPhone = document.getElementById('selectedCustomerPhone');
+        const customerStats = document.getElementById('selectedCustomerStats');
 
-            const selectedCustName = document.getElementById('selectedCustomerName');
-            if(selectedCustName) selectedCustName.textContent = customer.name;
-
-            const selectedCustPhone = document.getElementById('selectedCustomerPhone');
-            if(selectedCustPhone) selectedCustPhone.textContent = customer.phone;
-
-            // Mostrar estatísticas se disponíveis
-            const stats = customer.totalPurchases > 0 ?
-                `${customer.totalPurchases} compras • Total: ${formatCurrency(customer.totalSpent)}` :
-                'Novo cliente';
-            const selectedCustStats = document.getElementById('selectedCustomerStats');
-            if(selectedCustStats) selectedCustStats.textContent = stats;
-
-            const selectedCustInfo = document.getElementById('selectedCustomerInfo');
-            if(selectedCustInfo) selectedCustInfo.classList.remove('hidden');
-
-            updateFinalizeSaleButton();
+        customerName.textContent = customer.name;
+        customerPhone.textContent = customer.phone || 'Sem telefone cadastrado';
+        
+        const stats = [];
+        if (customer.totalPurchases) {
+            stats.push(`${customer.totalPurchases} ${customer.totalPurchases === 1 ? 'compra' : 'compras'}`);
         }
+        if (customer.totalSpent) {
+            stats.push(`Total: ${formatCurrency(customer.totalSpent)}`);
+        }
+        if (customer.lastPurchaseDate) {
+            const lastPurchase = new Date(customer.lastPurchaseDate.toDate());
+            stats.push(`Última compra: ${lastPurchase.toLocaleDateString('pt-BR')}`);
+        }
+        
+        customerStats.textContent = stats.join(' • ') || 'Primeiro atendimento';
+        selectedCustomerInfo.classList.remove('hidden');
+
+        // Limpar busca e esconder sugestões
+        document.getElementById('customerSearchInput').value = customer.name;
+        document.getElementById('customerSuggestions').classList.add('hidden');
+
+        // Atualizar botão de finalizar venda
+        updateFinalizeSaleButton();
     } catch (error) {
-        console.error("❌ Erro ao selecionar cliente:", error);
-        showTemporaryAlert("Erro ao carregar dados do cliente", "error");
+        console.error('Erro ao selecionar cliente:', error);
+        showTemporaryAlert('Erro ao selecionar cliente. Tente novamente.', 'error');
     }
 }
 
@@ -4721,3 +4754,243 @@ console.log("   - Pesquisa avançada de produtos");
 console.log("   - Dashboard personalizado por perfil");
 console.log("   - Integração de vendas com clientes");
 console.log("   - Interface responsiva e moderna");
+
+function setupSaleFormEventListeners(currentUser) {
+    // Busca de clientes
+    const customerSearchInput = document.getElementById('customerSearchInput');
+    const customerSuggestions = document.getElementById('customerSuggestions');
+    
+    if (customerSearchInput) {
+        let debounceTimeout;
+        
+        customerSearchInput.addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.trim();
+            
+            // Limpar o timeout anterior
+            if (debounceTimeout) clearTimeout(debounceTimeout);
+            
+            // Se o campo estiver vazio, esconder as sugestões
+            if (!searchTerm) {
+                customerSuggestions.classList.add('hidden');
+                return;
+            }
+
+            // Configurar novo timeout para debounce
+            debounceTimeout = setTimeout(async () => {
+                try {
+                    const customersRef = firebase.firestore().collection('customers');
+                    const snapshot = await customersRef
+                        .orderBy('name')
+                        .startAt(searchTerm)
+                        .endAt(searchTerm + '\uf8ff')
+                        .limit(5)
+                        .get();
+
+                    const suggestions = [];
+                    snapshot.forEach(doc => {
+                        suggestions.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    renderCustomerSuggestions(suggestions);
+                } catch (error) {
+                    console.error('Erro ao buscar clientes:', error);
+                    customerSuggestions.innerHTML = `
+                        <div class="customer-suggestion-item">
+                            <div class="text-red-400 text-sm">Erro ao buscar clientes. Tente novamente.</div>
+                        </div>
+                    `;
+                    customerSuggestions.classList.remove('hidden');
+                }
+            }, 300);
+        });
+
+        // Fechar sugestões ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!customerSearchInput.contains(e.target) && !customerSuggestions.contains(e.target)) {
+                customerSuggestions.classList.add('hidden');
+            }
+        });
+
+        // Prevenir que o clique nas sugestões feche o dropdown
+        customerSuggestions.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    // Busca de produtos
+    const productSearchInput = document.getElementById('productSearchInput');
+    if (productSearchInput) {
+        productSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const filteredProducts = EliteControl.state.availableProducts.filter(product =>
+                product.name.toLowerCase().includes(searchTerm) ||
+                product.category.toLowerCase().includes(searchTerm)
+            );
+            renderAvailableProducts(filteredProducts);
+        });
+    }
+
+    // Botão Novo Cliente
+    const newCustomerButton = document.getElementById('newCustomerButton');
+    if (newCustomerButton) {
+        newCustomerButton.addEventListener('click', () => {
+            showCustomerModal();
+        });
+    }
+
+    // Botão Remover Cliente
+    const removeCustomerButton = document.getElementById('removeCustomerButton');
+    if (removeCustomerButton) {
+        removeCustomerButton.addEventListener('click', () => {
+            EliteControl.state.selectedCustomer = null;
+            document.getElementById('selectedCustomerInfo').classList.add('hidden');
+            document.getElementById('customerSearchInput').value = '';
+            updateFinalizeSaleButton();
+        });
+    }
+
+    // Botão Limpar Carrinho
+    const clearCartButton = document.getElementById('clearCartButton');
+    if (clearCartButton) {
+        clearCartButton.addEventListener('click', () => {
+            showCustomConfirm('Deseja realmente limpar o carrinho?', clearCart);
+        });
+    }
+
+    // Botão Cancelar Venda
+    const cancelSaleButton = document.getElementById('cancelSaleButton');
+    if (cancelSaleButton) {
+        cancelSaleButton.addEventListener('click', () => {
+            showCustomConfirm('Deseja realmente cancelar esta venda?', () => {
+                clearCart();
+                EliteControl.state.selectedCustomer = null;
+                document.getElementById('selectedCustomerInfo').classList.add('hidden');
+                document.getElementById('customerSearchInput').value = '';
+                updateFinalizeSaleButton();
+            });
+        });
+    }
+
+    // Botão Finalizar Venda
+    const finalizeSaleButton = document.getElementById('finalizeSaleButton');
+    if (finalizeSaleButton) {
+        finalizeSaleButton.addEventListener('click', async () => {
+            if (!EliteControl.state.selectedCustomer || EliteControl.state.saleCart.length === 0) return;
+
+            try {
+                const sale = {
+                    customerId: EliteControl.state.selectedCustomer.id,
+                    customerName: EliteControl.state.selectedCustomer.name,
+                    items: EliteControl.state.saleCart,
+                    total: EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0),
+                    date: new Date(),
+                    vendorId: currentUser.uid,
+                    vendorName: currentUser.name || currentUser.email
+                };
+
+                await firebase.firestore().collection('sales').add(sale);
+                
+                // Atualizar estoque
+                const batch = firebase.firestore().batch();
+                for (const item of sale.items) {
+                    const productRef = firebase.firestore().collection('products').doc(item.productId);
+                    batch.update(productRef, {
+                        stock: firebase.firestore.FieldValue.increment(-item.quantity)
+                    });
+                }
+                await batch.commit();
+
+                // Atualizar estatísticas do cliente
+                const customerRef = firebase.firestore().collection('customers').doc(sale.customerId);
+                await customerRef.update({
+                    totalPurchases: firebase.firestore.FieldValue.increment(1),
+                    lastPurchaseDate: sale.date,
+                    totalSpent: firebase.firestore.FieldValue.increment(sale.total)
+                });
+
+                // Limpar formulário
+                clearCart();
+                EliteControl.state.selectedCustomer = null;
+                document.getElementById('selectedCustomerInfo').classList.add('hidden');
+                document.getElementById('customerSearchInput').value = '';
+                updateFinalizeSaleButton();
+
+                // Mostrar modal de sucesso
+                showSaleSuccessModal(sale);
+
+                // Recarregar produtos
+                await reloadProductsIfNeeded();
+            } catch (error) {
+                console.error('Erro ao finalizar venda:', error);
+                showTemporaryAlert('Erro ao finalizar venda. Tente novamente.', 'error');
+            }
+        });
+    }
+}
+
+// Função para atualizar a hora atual
+function updateCurrentTime() {
+    const element = document.getElementById('currentDateTime');
+    if (element) {
+        const now = new Date();
+        element.textContent = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+    }
+}
+
+// Função para atualizar o botão de finalizar venda
+function updateFinalizeSaleButton() {
+    const button = document.getElementById('finalizeSaleButton');
+    if (!button) return;
+
+    const hasCustomer = EliteControl.state.selectedCustomer !== null;
+    const hasItems = EliteControl.state.saleCart.length > 0;
+
+    button.disabled = !hasCustomer || !hasItems;
+    button.title = !hasCustomer ? 'Selecione um cliente' : !hasItems ? 'Adicione produtos ao carrinho' : '';
+}
+
+// Função para mostrar o modal de sucesso da venda
+function showSaleSuccessModal(sale) {
+    const modalContent = `
+        <div class="text-center mb-6">
+            <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
+            <h3 class="text-xl font-semibold text-slate-100 mb-2">Venda Realizada com Sucesso!</h3>
+            <p class="text-slate-400">Venda registrada para ${sale.customerName}</p>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-slate-400">Total da venda:</span>
+                <span class="text-xl font-bold text-green-400">${formatCurrency(sale.total)}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400">Itens vendidos:</span>
+                <span class="text-slate-100">${sale.items.length} ${sale.items.length === 1 ? 'item' : 'itens'}</span>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button onclick="closeSaleSuccessModal()" class="btn-primary">
+                <i class="fas fa-check mr-2"></i>
+                OK
+            </button>
+        </div>
+    `;
+
+    showCustomModal('Venda Concluída', modalContent);
+}
+
+// Função para fechar o modal de sucesso
+function closeSaleSuccessModal() {
+    closeCustomModal();
+    window.location.hash = '#vendas';
+}
+
+// Inicializar as funções globais
+window.toggleProductSelection = toggleProductSelection;
+window.changeQuantity = changeQuantity;
+window.updateQuantity = updateQuantity;
+window.removeCartItem = removeCartItem;
+window.clearCart = clearCart;
+window.updateCartItemQuantity = updateCartItemQuantity;
+window.closeSaleSuccessModal = closeSaleSuccessModal;
+window.selectCustomer = selectCustomer;
+window.saveNewCustomer = saveNewCustomer;
