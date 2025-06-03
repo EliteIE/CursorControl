@@ -2289,8 +2289,16 @@ async function renderCustomersSection(container, currentUser) {
         container.innerHTML = `
             <div class="customers-container">
                 <div class="customers-header mb-6">
-                    <h2 class="text-xl font-semibold text-slate-100">Gerenciamento de Clientes</h2>
-                    <p class="text-slate-400 mt-1">Sistema CRM com IA para relacionamento e vendas</p>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-semibold text-slate-100">Gerenciamento de Clientes</h2>
+                            <p class="text-slate-400 mt-1">Sistema CRM com IA para relacionamento e vendas</p>
+                        </div>
+                        <button id="addCustomerButton" class="btn-primary">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            Novo Cliente
+                        </button>
+                    </div>
                 </div>
 
                 <div class="customers-kpis grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -2335,13 +2343,66 @@ async function renderCustomersSection(container, currentUser) {
                     </div>
                 </div>
 
-                <div class="text-center py-8 text-slate-400">
-                    <i class="fas fa-users-cog fa-3x mb-4"></i>
-                    <p>Sistema CRM em desenvolvimento</p>
-                    <p class="text-sm mt-2">Funcionalidades de clientes serão implementadas em breve.</p>
+                <div class="customers-tools bg-slate-800 p-4 rounded-lg mb-6">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="text"
+                                       id="customerSearchInput"
+                                       class="form-input pl-10 w-full"
+                                       placeholder="Buscar clientes por nome, telefone ou email...">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="customerStatusFilter" class="form-select">
+                                <option value="">Todos os Status</option>
+                                <option value="active">Ativos</option>
+                                <option value="inactive">Inativos</option>
+                            </select>
+                            <select id="customerSortFilter" class="form-select">
+                                <option value="name">Nome (A-Z)</option>
+                                <option value="-totalSpent">Maior Gasto</option>
+                                <option value="lastPurchaseDate">Última Compra</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="customers-table-container bg-slate-800 rounded-lg overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-700">
+                        <thead class="bg-slate-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Cliente
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Contato
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Total Gasto
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Última Compra
+                                </th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                    Ações
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700" id="customersTableBody">
+                            ${renderCustomersTableRows(customers)}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         `;
+
+        // Configurar event listeners
+        setupCustomersEventListeners();
 
     } catch (error) {
         console.error("❌ Erro ao carregar clientes:", error);
@@ -2352,6 +2413,487 @@ async function renderCustomersSection(container, currentUser) {
             </div>
         `;
     }
+}
+
+function renderCustomersTableRows(customers) {
+    if (!customers || customers.length === 0) {
+        return `
+            <tr>
+                <td colspan="6" class="px-6 py-4 text-center text-slate-400">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <p>Nenhum cliente cadastrado</p>
+                </td>
+            </tr>
+        `;
+    }
+
+    return customers.map(customer => {
+        const status = getCustomerStatus(customer);
+        const lastPurchaseDate = customer.lastPurchaseDate ? formatDate(customer.lastPurchaseDate.toDate()) : 'Nunca';
+        
+        return `
+            <tr class="hover:bg-slate-750 transition-colors duration-150">
+                <td class="px-6 py-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center">
+                            <i class="fas fa-user text-slate-400"></i>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-slate-200">${customer.name}</div>
+                            ${customer.cpf ? `<div class="text-sm text-slate-400">CPF: ${customer.cpf}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-slate-300">${customer.phone}</div>
+                    ${customer.email ? `<div class="text-sm text-slate-400">${customer.email}</div>` : ''}
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.class}">
+                        ${status.text}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-slate-300">
+                    ${formatCurrency(customer.totalSpent || 0)}
+                    ${customer.totalPurchases ? `<div class="text-xs text-slate-400">${customer.totalPurchases} compras</div>` : ''}
+                </td>
+                <td class="px-6 py-4 text-sm text-slate-300">
+                    ${lastPurchaseDate}
+                </td>
+                <td class="px-6 py-4 text-right text-sm font-medium">
+                    <button onclick="viewCustomerDetails('${customer.id}')" class="text-sky-400 hover:text-sky-300 mr-3">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="editCustomer('${customer.id}')" class="text-sky-400 hover:text-sky-300 mr-3">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteCustomer('${customer.id}')" class="text-red-500 hover:text-red-400">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getCustomerStatus(customer) {
+    if (!customer.lastPurchaseDate) {
+        return {
+            text: 'Novo',
+            class: 'bg-sky-900 text-sky-200'
+        };
+    }
+
+    const daysSinceLastPurchase = Math.floor(
+        (new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysSinceLastPurchase > 90) {
+        return {
+            text: 'Inativo',
+            class: 'bg-red-900 text-red-200'
+        };
+    }
+
+    if (customer.totalPurchases >= 10) {
+        return {
+            text: 'VIP',
+            class: 'bg-yellow-900 text-yellow-200'
+        };
+    }
+
+    if (customer.totalPurchases >= 5) {
+        return {
+            text: 'Frequente',
+            class: 'bg-green-900 text-green-200'
+        };
+    }
+
+    return {
+        text: 'Regular',
+        class: 'bg-slate-600 text-slate-200'
+    };
+}
+
+function setupCustomersEventListeners() {
+    // Busca de clientes
+    const searchInput = document.getElementById('customerSearchInput');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => filterCustomers(), 300);
+        });
+    }
+
+    // Filtros
+    const statusFilter = document.getElementById('customerStatusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterCustomers);
+    }
+
+    const sortFilter = document.getElementById('customerSortFilter');
+    if (sortFilter) {
+        sortFilter.addEventListener('change', filterCustomers);
+    }
+
+    // Botão novo cliente
+    const addButton = document.getElementById('addCustomerButton');
+    if (addButton) {
+        addButton.addEventListener('click', () => showCustomerModal());
+    }
+}
+
+async function filterCustomers() {
+    const searchTerm = document.getElementById('customerSearchInput')?.value.toLowerCase() || '';
+    const status = document.getElementById('customerStatusFilter')?.value;
+    const sort = document.getElementById('customerSortFilter')?.value;
+
+    try {
+        let customers = await CRMService.getCustomers();
+
+        // Aplicar busca
+        if (searchTerm) {
+            customers = customers.filter(customer =>
+                customer.name.toLowerCase().includes(searchTerm) ||
+                customer.phone.includes(searchTerm) ||
+                (customer.email && customer.email.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        // Aplicar filtro de status
+        if (status) {
+            customers = customers.filter(customer => {
+                if (status === 'inactive') {
+                    return !customer.lastPurchaseDate || 
+                           Math.floor((new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)) > 90;
+                }
+                return customer.lastPurchaseDate && 
+                       Math.floor((new Date() - customer.lastPurchaseDate.toDate()) / (1000 * 60 * 60 * 24)) <= 90;
+            });
+        }
+
+        // Aplicar ordenação
+        if (sort) {
+            const [field, direction] = sort.startsWith('-') ? [sort.slice(1), 'desc'] : [sort, 'asc'];
+            customers.sort((a, b) => {
+                let valueA = a[field];
+                let valueB = b[field];
+
+                if (field === 'lastPurchaseDate') {
+                    valueA = valueA ? valueA.toDate().getTime() : 0;
+                    valueB = valueB ? valueB.toDate().getTime() : 0;
+                }
+
+                if (direction === 'desc') {
+                    return valueB - valueA;
+                }
+                return valueA - valueB;
+            });
+        }
+
+        // Atualizar tabela
+        const tbody = document.getElementById('customersTableBody');
+        if (tbody) {
+            tbody.innerHTML = renderCustomersTableRows(customers);
+        }
+
+    } catch (error) {
+        console.error("❌ Erro ao filtrar clientes:", error);
+        showTemporaryAlert("Erro ao filtrar clientes", "error");
+    }
+}
+
+function showCustomerModal(customerId = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">${customerId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">
+                    &times;
+                </button>
+            </div>
+
+            <form id="customerForm" class="modal-body">
+                <input type="hidden" id="customerId" value="${customerId || ''}">
+                
+                <div class="form-group">
+                    <label for="customerName" class="form-label">Nome *</label>
+                    <input type="text"
+                           id="customerName"
+                           class="form-input"
+                           placeholder="Nome completo"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="customerPhone" class="form-label">Telefone *</label>
+                    <input type="tel"
+                           id="customerPhone"
+                           class="form-input"
+                           placeholder="(00) 00000-0000"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="customerEmail" class="form-label">Email</label>
+                    <input type="email"
+                           id="customerEmail"
+                           class="form-input"
+                           placeholder="email@exemplo.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="customerCPF" class="form-label">CPF</label>
+                    <input type="text"
+                           id="customerCPF"
+                           class="form-input"
+                           placeholder="000.000.000-00">
+                </div>
+
+                <div class="form-group">
+                    <label for="customerAddress" class="form-label">Endereço</label>
+                    <textarea id="customerAddress"
+                              class="form-input"
+                              rows="2"
+                              placeholder="Endereço completo"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="customerBirthdate" class="form-label">Data de Nascimento</label>
+                    <input type="date"
+                           id="customerBirthdate"
+                           class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label for="customerNotes" class="form-label">Observações</label>
+                    <textarea id="customerNotes"
+                              class="form-input"
+                              rows="3"
+                              placeholder="Observações sobre o cliente"></textarea>
+                </div>
+            </form>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="this.closest('.modal-backdrop').remove()">
+                    Cancelar
+                </button>
+                <button class="btn-primary" onclick="saveCustomer()">
+                    <i class="fas fa-save mr-2"></i>
+                    Salvar Cliente
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.remove('hidden'), 10);
+
+    if (customerId) {
+        loadCustomerData(customerId);
+    }
+}
+
+async function loadCustomerData(customerId) {
+    try {
+        const customer = await CRMService.getCustomerById(customerId);
+        if (!customer) {
+            showTemporaryAlert("Cliente não encontrado", "error");
+            return;
+        }
+
+        // Preencher formulário
+        document.getElementById('customerName').value = customer.name || '';
+        document.getElementById('customerPhone').value = customer.phone || '';
+        document.getElementById('customerEmail').value = customer.email || '';
+        document.getElementById('customerCPF').value = customer.cpf || '';
+        document.getElementById('customerAddress').value = customer.address || '';
+        document.getElementById('customerBirthdate').value = customer.birthdate || '';
+        document.getElementById('customerNotes').value = customer.notes || '';
+
+    } catch (error) {
+        console.error("❌ Erro ao carregar dados do cliente:", error);
+        showTemporaryAlert("Erro ao carregar dados do cliente", "error");
+    }
+}
+
+async function saveCustomer() {
+    const form = document.getElementById('customerForm');
+    if (!form || !form.checkValidity()) {
+        if(form) form.reportValidity();
+        return;
+    }
+
+    const customerData = {
+        id: document.getElementById('customerId').value,
+        name: document.getElementById('customerName').value.trim(),
+        phone: document.getElementById('customerPhone').value.replace(/\D/g, ''),
+        email: document.getElementById('customerEmail').value.trim(),
+        cpf: document.getElementById('customerCPF').value.replace(/\D/g, ''),
+        address: document.getElementById('customerAddress').value.trim(),
+        birthdate: document.getElementById('customerBirthdate').value,
+        notes: document.getElementById('customerNotes').value.trim()
+    };
+
+    try {
+        await CRMService.createOrUpdateCustomer(customerData);
+        
+        // Fechar modal
+        const modal = document.querySelector('.modal-backdrop');
+        if (modal) modal.remove();
+
+        // Atualizar lista
+        filterCustomers();
+
+        showTemporaryAlert(
+            customerData.id ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!',
+            'success'
+        );
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar cliente:", error);
+        showTemporaryAlert("Erro ao salvar cliente. Verifique os dados.", "error");
+    }
+}
+
+async function viewCustomerDetails(customerId) {
+    try {
+        const customer = await CRMService.getCustomerById(customerId);
+        if (!customer) {
+            showTemporaryAlert("Cliente não encontrado", "error");
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Detalhes do Cliente</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">
+                        &times;
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="customer-details-header mb-6">
+                        <div class="flex items-center">
+                            <div class="h-16 w-16 rounded-full bg-slate-700 flex items-center justify-center">
+                                <i class="fas fa-user fa-lg text-slate-400"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h4 class="text-lg font-semibold text-slate-100">${customer.name}</h4>
+                                <p class="text-slate-400">${customer.phone}</p>
+                                ${customer.email ? `<p class="text-slate-400">${customer.email}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-slate-800 p-4 rounded-lg">
+                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Informações Pessoais</h5>
+                            <div class="space-y-2">
+                                ${customer.cpf ? `
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">CPF:</span>
+                                        <span class="text-slate-300">${customer.cpf}</span>
+                                    </div>
+                                ` : ''}
+                                ${customer.birthdate ? `
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Data de Nascimento:</span>
+                                        <span class="text-slate-300">${formatDate(customer.birthdate)}</span>
+                                    </div>
+                                ` : ''}
+                                ${customer.address ? `
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Endereço:</span>
+                                        <span class="text-slate-300">${customer.address}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800 p-4 rounded-lg">
+                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Histórico de Compras</h5>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Total de Compras:</span>
+                                    <span class="text-slate-300">${customer.totalPurchases || 0}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Total Gasto:</span>
+                                    <span class="text-slate-300">${formatCurrency(customer.totalSpent || 0)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">Ticket Médio:</span>
+                                    <span class="text-slate-300">${formatCurrency(customer.averageTicket || 0)}</span>
+                                </div>
+                                ${customer.lastPurchaseDate ? `
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Última Compra:</span>
+                                        <span class="text-slate-300">${formatDate(customer.lastPurchaseDate.toDate())}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${customer.notes ? `
+                        <div class="bg-slate-800 p-4 rounded-lg mb-6">
+                            <h5 class="text-sm font-semibold text-slate-300 mb-3">Observações</h5>
+                            <p class="text-slate-400">${customer.notes}</p>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-backdrop').remove()">
+                        Fechar
+                    </button>
+                    <button class="btn-primary" onclick="editCustomer('${customer.id}')">
+                        <i class="fas fa-edit mr-2"></i>
+                        Editar Cliente
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        setTimeout(() => modal.classList.remove('hidden'), 10);
+
+    } catch (error) {
+        console.error("❌ Erro ao carregar detalhes do cliente:", error);
+        showTemporaryAlert("Erro ao carregar detalhes do cliente", "error");
+    }
+}
+
+function editCustomer(customerId) {
+    // Fechar modal de detalhes se estiver aberto
+    const detailsModal = document.querySelector('.modal-backdrop');
+    if (detailsModal) detailsModal.remove();
+
+    // Abrir modal de edição
+    showCustomerModal(customerId);
+}
+
+function deleteCustomer(customerId) {
+    showCustomConfirm(
+        'Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.',
+        async () => {
+            try {
+                await CRMService.deleteCustomer(customerId);
+                filterCustomers();
+                showTemporaryAlert('Cliente excluído com sucesso!', 'success');
+            } catch (error) {
+                console.error("❌ Erro ao excluir cliente:", error);
+                showTemporaryAlert("Erro ao excluir cliente", "error");
+            }
+        }
+    );
 }
 
 // === SEÇÃO DE USUÁRIOS ===
