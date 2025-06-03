@@ -917,47 +917,55 @@ function toggleProductSelection(productId) {
     const product = EliteControl.state.availableProducts.find(p => p.id === productId);
     if (!product) return;
 
-    const quantityInput = document.getElementById(`qty-${productId}`);
-    const quantity = parseInt(quantityInput?.value || 1);
+    const quantityInput = document.getElementById(`quantity-${productId}`);
+    const quantity = parseInt(quantityInput?.value) || 1;
 
-    if (quantity <= 0 || quantity > product.stock) {
-        showTemporaryAlert(`Quantidade inválida. Máximo disponível: ${product.stock}`, 'warning');
-        return;
-    }
-
-    const existingItemIndex = EliteControl.state.saleCart.findIndex(item => item.productId === productId);
-
-    if (existingItemIndex >= 0) {
-        EliteControl.state.saleCart[existingItemIndex].quantity += quantity;
+    const existingItem = EliteControl.state.saleCart.find(item => item.productId === productId);
+    if (existingItem) {
+        existingItem.quantity = quantity;
     } else {
         EliteControl.state.saleCart.push({
-            productId: productId,
+            productId: product.id,
             name: product.name,
+            category: product.category,
             price: product.price,
             quantity: quantity,
-            category: product.category
+            stock: product.stock
         });
     }
 
-    updateSaleInterface();
-    showTemporaryAlert(`${product.name} adicionado ao carrinho`, 'success', 2000);
+    updateCartDisplay();
+    showTemporaryAlert('Produto adicionado ao carrinho', 'success');
 }
 
-function changeQuantity(productId, delta) {
-    const quantityInput = document.getElementById(`qty-${productId}`);
-    if (!quantityInput) return;
+function changeQuantity(productId, delta, isCartItem = false) {
+    const inputId = isCartItem ? `cart-quantity-${productId}` : `quantity-${productId}`;
+    const input = document.getElementById(inputId);
+    if (!input) return;
 
-    const currentQuantity = parseInt(quantityInput.value);
-    const newQuantity = Math.max(1, currentQuantity + delta);
-    
+    const currentValue = parseInt(input.value) || 1;
     const product = EliteControl.state.availableProducts.find(p => p.id === productId);
-    if (product && newQuantity <= product.stock) {
-        quantityInput.value = newQuantity;
+    if (!product) return;
+
+    let newValue = currentValue + delta;
+    newValue = Math.max(1, Math.min(newValue, product.stock));
+    input.value = newValue;
+
+    if (isCartItem) {
+        updateCartItemQuantity(productId, newValue);
     }
 }
 
+function updateCartItemQuantity(productId, quantity) {
+    const cartItem = EliteControl.state.saleCart.find(item => item.productId === productId);
+    if (!cartItem) return;
+
+    cartItem.quantity = quantity;
+    updateCartDisplay();
+}
+
 function updateQuantity(productId) {
-    const quantityInput = document.getElementById(`qty-${productId}`);
+    const quantityInput = document.getElementById(`quantity-${productId}`);
     if (!quantityInput) return;
 
     const quantity = parseInt(quantityInput.value);
@@ -990,51 +998,60 @@ function updateSaleInterface() {
 }
 
 function updateCartDisplay() {
-    const cartContainer = document.getElementById('cartItemsList');
-    const clearButton = document.getElementById('clearCartButton');
-    const summaryContainer = document.getElementById('cartSummary');
-
-    if (!cartContainer) return;
+    const container = document.getElementById('cartItemsList');
+    if (!container) return;
 
     if (EliteControl.state.saleCart.length === 0) {
-        cartContainer.innerHTML = `
+        container.innerHTML = `
             <div class="empty-cart">
                 <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
                 <p class="text-slate-400">Nenhum produto adicionado</p>
                 <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
             </div>
         `;
-        
-        if (clearButton) clearButton.style.display = 'none';
-        if (summaryContainer) summaryContainer.style.display = 'none';
+        document.getElementById('cartSummary').style.display = 'none';
+        document.getElementById('clearCartButton').style.display = 'none';
         return;
     }
 
-    cartContainer.innerHTML = EliteControl.state.saleCart.map(item => `
+    container.innerHTML = EliteControl.state.saleCart.map(item => `
         <div class="cart-item">
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-details">
-                    ${item.quantity}x ${formatCurrency(item.price)} = ${formatCurrency(item.quantity * item.price)}
-                </div>
+                <div class="cart-item-details">${item.category}</div>
             </div>
-            <div class="cart-item-price">${formatCurrency(item.quantity * item.price)}</div>
-            <button class="btn-secondary btn-sm" onclick="removeCartItem('${item.productId}')">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="cart-item-actions">
+                <div class="cart-quantity-controls">
+                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', -1, true)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <input type="number" 
+                           class="cart-quantity-input" 
+                           id="cart-quantity-${item.productId}"
+                           value="${item.quantity}" 
+                           min="1" 
+                           max="${item.stock}"
+                           onchange="updateCartItemQuantity('${item.productId}', this.value)">
+                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', 1, true)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="cart-item-price">${formatCurrency(item.price * item.quantity)}</div>
+                <button class="cart-item-remove" onclick="removeCartItem('${item.productId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
     `).join('');
 
-    if (clearButton) clearButton.style.display = 'block';
-    if (summaryContainer) summaryContainer.style.display = 'block';
+    // Atualizar sumário
+    const subtotal = EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cartTotal').textContent = formatCurrency(subtotal);
+    document.getElementById('cartSummary').style.display = 'block';
+    document.getElementById('clearCartButton').style.display = 'block';
 
-    const subtotal = EliteControl.state.saleCart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    
-    const subtotalEl = document.getElementById('cartSubtotal');
-    const totalEl = document.getElementById('cartTotal');
-    
-    if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
-    if (totalEl) totalEl.textContent = formatCurrency(subtotal);
+    updateFinalizeSaleButton();
 }
 
 function updateCurrentTime() {
@@ -4687,6 +4704,8 @@ window.toggleProductSelection = toggleProductSelection;
 window.changeQuantity = changeQuantity;
 window.updateQuantity = updateQuantity;
 window.removeCartItem = removeCartItem;
+window.clearCart = clearCart;
+window.updateCartItemQuantity = updateCartItemQuantity;
 window.closeSaleSuccessModal = closeSaleSuccessModal;
 window.handleEditProduct = handleEditProduct;
 window.handleDeleteProductConfirmation = handleDeleteProductConfirmation;
