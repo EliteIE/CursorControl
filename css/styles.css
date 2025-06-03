@@ -1233,3 +1233,67 @@ table {
         overflow-x: auto;
     }
 }
+
+/* === CLIENTES === */
+.customers-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.customers-header {
+    display: flex;
+    flex-direction: column;
+}
+
+.customers-tools {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    box-shadow: var(--shadow-md);
+}
+
+.customers-table-container {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+}
+
+.customer-suggestion-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.customer-suggestion-item:hover {
+    background-color: rgba(51, 65, 85, 0.5);
+}
+
+.customer-suggestion-name {
+    font-weight: 500;
+    color: var(--color-text-light);
+}
+
+.customer-suggestion-info {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.customer-details-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .customers-tools .flex-col {
+        gap: 1rem;
+    }
+    
+    .customers-table-container {
+        margin: 0 -1rem;
+        border-radius: 0;
+    }
+}
