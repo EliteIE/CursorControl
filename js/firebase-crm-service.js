@@ -643,6 +643,33 @@ const CRMService = {
             console.error("❌ Erro ao gerar mensagem promocional:", error);
             throw error;
         }
+    },
+
+    /**
+     * Excluir cliente
+     * @param {string} customerId - ID do cliente
+     */
+    deleteCustomer: async function(customerId) {
+        if (!db) throw new Error("Firestore não inicializado");
+        if (!customerId) throw new Error("ID do cliente é obrigatório");
+        
+        try {
+            console.log("🗑️ Excluindo cliente:", customerId);
+            
+            // Verificar se cliente existe
+            const customerDoc = await db.collection('customers').doc(customerId).get();
+            if (!customerDoc.exists) {
+                throw new Error("Cliente não encontrado");
+            }
+            
+            // Excluir cliente
+            await db.collection('customers').doc(customerId).delete();
+            console.log("✅ Cliente excluído com sucesso");
+            
+        } catch (error) {
+            console.error("❌ Erro ao excluir cliente:", error);
+            throw error;
+        }
     }
 };
 
