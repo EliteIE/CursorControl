@@ -1008,7 +1008,7 @@ function updateCartDisplay() {
 
     if (EliteControl.state.saleCart.length === 0) {
         container.innerHTML = `
-            <div class="empty-cart">
+            <div class="empty-cart text-center py-8">
                 <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
                 <p class="text-slate-400">Nenhum produto adicionado</p>
                 <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
@@ -1022,27 +1022,32 @@ function updateCartDisplay() {
     container.innerHTML = EliteControl.state.saleCart.map(item => `
         <div class="cart-item">
             <div class="cart-item-info">
-                <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-details">${item.category}</div>
+                <h4 class="font-semibold text-slate-100">${item.name}</h4>
+                <p class="text-sm text-slate-400">${item.category}</p>
             </div>
+            
             <div class="cart-item-actions">
                 <div class="cart-quantity-controls">
-                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', -1, true)">
+                    <button onclick="changeQuantity('${item.productId}', -1, true)">
                         <i class="fas fa-minus"></i>
                     </button>
                     <input type="number" 
-                           class="cart-quantity-input" 
-                           id="cart-quantity-${item.productId}"
+                           id="cart-quantity-${item.productId}" 
                            value="${item.quantity}" 
                            min="1" 
                            max="${item.stock}"
                            onchange="updateCartItemQuantity('${item.productId}', this.value)">
-                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', 1, true)">
+                    <button onclick="changeQuantity('${item.productId}', 1, true)">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <div class="cart-item-price">${formatCurrency(item.price * item.quantity)}</div>
-                <button class="cart-item-remove" onclick="removeCartItem('${item.productId}')">
+                
+                <div class="text-right min-w-[100px]">
+                    <div class="font-semibold text-sky-400">${formatCurrency(item.price * item.quantity)}</div>
+                    <div class="text-sm text-slate-400">${item.quantity}x ${formatCurrency(item.price)}</div>
+                </div>
+                
+                <button class="text-slate-400 hover:text-red-400 transition-colors" onclick="removeCartItem('${item.productId}')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1727,71 +1732,6 @@ function renderAvailableProducts(products) {
             </div>
         </div>
     `).join('');
-}
-
-function updateCartDisplay() {
-    const container = document.getElementById('cartItemsList');
-    if (!container) return;
-
-    if (EliteControl.state.saleCart.length === 0) {
-        container.innerHTML = `
-            <div class="empty-cart text-center py-8">
-                <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
-                <p class="text-slate-400">Nenhum produto adicionado</p>
-                <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
-            </div>
-        `;
-        document.getElementById('cartSummary').style.display = 'none';
-        document.getElementById('clearCartButton').style.display = 'none';
-        return;
-    }
-
-    container.innerHTML = EliteControl.state.saleCart.map(item => `
-        <div class="cart-item bg-slate-700 rounded-lg p-4">
-            <div class="flex justify-between items-center">
-                <div class="flex-1">
-                    <h4 class="font-semibold text-slate-100">${item.name}</h4>
-                    <p class="text-sm text-slate-400">${item.category}</p>
-                </div>
-                
-                <div class="flex items-center gap-4">
-                    <div class="quantity-controls flex items-center bg-slate-800 rounded-lg">
-                        <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${item.productId}', -1, true)">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <input type="number" 
-                               id="cart-quantity-${item.productId}" 
-                               class="w-16 bg-transparent border-0 text-center text-slate-100" 
-                               value="${item.quantity}" 
-                               min="1" 
-                               max="${item.stock}"
-                               onchange="updateCartItemQuantity('${item.productId}', this.value)">
-                        <button class="p-2 text-slate-400 hover:text-slate-100" onclick="changeQuantity('${item.productId}', 1, true)">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="text-right min-w-[100px]">
-                        <div class="font-semibold text-sky-400">${formatCurrency(item.price * item.quantity)}</div>
-                        <div class="text-sm text-slate-400">${item.quantity}x ${formatCurrency(item.price)}</div>
-                    </div>
-                    
-                    <button class="text-slate-400 hover:text-red-400 transition-colors" onclick="removeCartItem('${item.productId}')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    // Atualizar sumário
-    const subtotal = EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
-    document.getElementById('cartTotal').textContent = formatCurrency(subtotal);
-    document.getElementById('cartSummary').style.display = 'block';
-    document.getElementById('clearCartButton').style.display = 'block';
-
-    updateFinalizeSaleButton();
 }
 
 function setupSaleFormEventListeners(currentUser) {
