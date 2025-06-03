@@ -614,9 +614,9 @@ function renderAvailableProducts(products) {
         .slice(0, 3);
 
     container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex gap-4 overflow-x-auto pb-2">
             ${topProducts.map(product => `
-                <div class="product-select-card ${product.stock <= 0 ? 'out-of-stock' : ''}">
+                <div class="product-select-card flex-1 min-w-[280px]">
                     <div class="product-select-header">
                         <span class="product-select-name">${product.name}</span>
                         <span class="product-select-price">${formatCurrency(product.price)}</span>
