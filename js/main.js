@@ -608,40 +608,96 @@ function renderAvailableProducts(products) {
         return;
     }
 
-    container.innerHTML = `
-        <div class="products-list">
-            ${products.map(product => `
-                <div class="product-item">
-                    <div class="product-info">
-                        <div class="product-name-price">
-                            <span class="product-name">${product.name}</span>
-                            <span class="product-price">R$ ${product.price.toFixed(2)}</span>
+    // Ordenar produtos por quantidade vendida e pegar os 3 mais vendidos
+    const topProducts = [...products]
+        .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
+        .slice(0, 3);
+
+    // Renderizar seção de produtos mais vendidos
+    const topProductsHtml = `
+        <div class="top-products-section">
+            <h3 class="section-title">
+                <i class="fas fa-star text-yellow-400"></i>
+                Produtos Mais Vendidos
+            </h3>
+            <div class="top-products-list">
+                ${topProducts.map(product => `
+                    <div class="top-product-item">
+                        <div class="product-info">
+                            <div class="product-name-price">
+                                <span class="product-name">${product.name}</span>
+                                <span class="product-price">R$ ${product.price.toFixed(2)}</span>
+                            </div>
+                            <div class="product-details">
+                                <span class="product-category">${product.category}</span>
+                                <span class="product-sales">${product.totalSold || 0} vendas</span>
+                            </div>
                         </div>
-                        <div class="product-details">
-                            <span class="product-category">${product.category}</span>
-                            <span class="product-stock">${product.stock} em estoque</span>
+                        <div class="product-actions">
+                            <div class="quantity-controls">
+                                <button onclick="changeQuantity('${product.id}', -1)" class="quantity-btn">-</button>
+                                <input type="number" 
+                                       id="quantity-${product.id}"
+                                       value="1"
+                                       min="1"
+                                       max="${product.stock}"
+                                       onchange="updateQuantity('${product.id}')"
+                                       class="quantity-input">
+                                <button onclick="changeQuantity('${product.id}', 1)" class="quantity-btn">+</button>
+                            </div>
+                            <button onclick="toggleProductSelection('${product.id}')" class="add-to-cart-btn">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="product-actions">
-                        <div class="quantity-controls">
-                            <button onclick="changeQuantity('${product.id}', -1)" class="quantity-btn">-</button>
-                            <input type="number" 
-                                   id="quantity-${product.id}"
-                                   value="1"
-                                   min="1"
-                                   max="${product.stock}"
-                                   onchange="updateQuantity('${product.id}')"
-                                   class="quantity-input">
-                            <button onclick="changeQuantity('${product.id}', 1)" class="quantity-btn">+</button>
-                        </div>
-                        <button onclick="toggleProductSelection('${product.id}')" class="add-to-cart-btn">
-                            <i class="fas fa-cart-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('')}
+                `).join('')}
+            </div>
         </div>
     `;
+
+    // Renderizar lista completa de produtos
+    const productsListHtml = `
+        <div class="products-section">
+            <h3 class="section-title">
+                <i class="fas fa-box text-sky-400"></i>
+                Todos os Produtos
+            </h3>
+            <div class="products-list">
+                ${products.map(product => `
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="product-name-price">
+                                <span class="product-name">${product.name}</span>
+                                <span class="product-price">R$ ${product.price.toFixed(2)}</span>
+                            </div>
+                            <div class="product-details">
+                                <span class="product-category">${product.category}</span>
+                                <span class="product-stock">${product.stock} em estoque</span>
+                            </div>
+                        </div>
+                        <div class="product-actions">
+                            <div class="quantity-controls">
+                                <button onclick="changeQuantity('${product.id}', -1)" class="quantity-btn">-</button>
+                                <input type="number" 
+                                       id="quantity-${product.id}"
+                                       value="1"
+                                       min="1"
+                                       max="${product.stock}"
+                                       onchange="updateQuantity('${product.id}')"
+                                       class="quantity-input">
+                                <button onclick="changeQuantity('${product.id}', 1)" class="quantity-btn">+</button>
+                            </div>
+                            <button onclick="toggleProductSelection('${product.id}')" class="add-to-cart-btn">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = topProductsHtml + productsListHtml;
 }
 
 function addSaleFormStyles() {
