@@ -608,100 +608,40 @@ function renderAvailableProducts(products) {
         return;
     }
 
-    // Ordenar produtos por quantidade vendida e pegar os 3 mais vendidos
-    const topProducts = products
-        .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
-        .slice(0, 3);
-
-    // Renderizar seção de produtos mais vendidos
-    const topProductsHtml = `
-        <div class="top-products-section">
-            <h3 class="text-lg font-semibold text-slate-100">
-                <i class="fas fa-star mr-2"></i>
-                Produtos Mais Vendidos
-            </h3>
-            <div class="top-products-grid">
-                ${topProducts.map(product => `
-                    <div class="top-product-card">
-                        <div class="top-product-name">${product.name}</div>
-                        <div class="top-product-stats">
-                            <span><i class="fas fa-chart-line mr-1"></i> ${product.totalSold || 0} vendas</span>
+    container.innerHTML = `
+        <div class="products-list">
+            ${products.map(product => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="product-name-price">
+                            <span class="product-name">${product.name}</span>
+                            <span class="product-price">R$ ${product.price.toFixed(2)}</span>
                         </div>
-                        <div class="top-product-price">${formatCurrency(product.price)}</div>
-                        ${product.stock > 0 ? `
-                            <button class="btn-primary w-full mt-3" onclick="toggleProductSelection('${product.id}')">
-                                <i class="fas fa-cart-plus mr-2"></i>Adicionar
-                            </button>
-                        ` : `
-                            <button class="btn-secondary w-full mt-3" disabled>
-                                <i class="fas fa-times mr-2"></i>Indisponível
-                            </button>
-                        `}
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-
-    // Renderizar lista completa de produtos
-    const productsListHtml = `
-        <div class="products-grid mt-6">
-            ${products.map(product => {
-                const lowStockThreshold = Number(product.lowStockAlert) || 10;
-                const isLowStock = product.stock <= lowStockThreshold && product.stock > 0;
-                const stockClass = product.stock === 0 ? 'out' : (isLowStock ? 'low' : 'available');
-                const stockLabel = product.stock === 0 ? 'Indisponível' : 
-                                 (isLowStock ? 'Estoque baixo' : 'Em estoque');
-
-                return `
-                    <div class="product-card ${product.stock === 0 ? 'opacity-60' : ''}">
-                        <div class="product-header">
-                            <div>
-                                <h4 class="text-lg font-semibold text-slate-100">${product.name}</h4>
-                                <span class="text-sm text-slate-400">${product.category}</span>
-                            </div>
-                            <span class="text-lg font-semibold text-sky-400">${formatCurrency(product.price)}</span>
-                        </div>
-                        
-                        <div class="product-info">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-slate-400">Estoque:</span>
-                                <span class="stock-badge ${stockClass}">${stockLabel}</span>
-                            </div>
-                            ${product.stock > 0 ? `
-                                <div class="flex items-center gap-3">
-                                    <div class="quantity-controls flex-1">
-                                        <button onclick="changeQuantity('${product.id}', -1)">
-                                            <i class="fas fa-minus"></i>
-                                        </button>
-                                        <input type="number" 
-                                               id="quantity-${product.id}"
-                                               value="1"
-                                               min="1"
-                                               max="${product.stock}"
-                                               onchange="updateQuantity('${product.id}')"
-                                               class="quantity-input">
-                                        <button onclick="changeQuantity('${product.id}', 1)">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                    <button class="btn-primary" onclick="toggleProductSelection('${product.id}')">
-                                        <i class="fas fa-cart-plus"></i>
-                                    </button>
-                                </div>
-                            ` : `
-                                <button class="btn-secondary w-full" disabled>
-                                    <i class="fas fa-times mr-2"></i>Indisponível
-                                </button>
-                            `}
+                        <div class="product-details">
+                            <span class="product-category">${product.category}</span>
+                            <span class="product-stock">${product.stock} em estoque</span>
                         </div>
                     </div>
-                `;
-            }).join('')}
+                    <div class="product-actions">
+                        <div class="quantity-controls">
+                            <button onclick="changeQuantity('${product.id}', -1)" class="quantity-btn">-</button>
+                            <input type="number" 
+                                   id="quantity-${product.id}"
+                                   value="1"
+                                   min="1"
+                                   max="${product.stock}"
+                                   onchange="updateQuantity('${product.id}')"
+                                   class="quantity-input">
+                            <button onclick="changeQuantity('${product.id}', 1)" class="quantity-btn">+</button>
+                        </div>
+                        <button onclick="toggleProductSelection('${product.id}')" class="add-to-cart-btn">
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
         </div>
     `;
-
-    container.innerHTML = topProductsHtml + productsListHtml;
 }
 
 function addSaleFormStyles() {
@@ -1845,13 +1785,22 @@ async function initializeSaleFormWithCRM(currentUser) {
 
     try {
         // Carregar produtos disponíveis
-        EliteControl.state.availableProducts = await DataService.getProducts();
-        renderAvailableProducts(EliteControl.state.availableProducts);
+        const products = await DataService.getProducts();
+        console.log("📦 Produtos carregados:", products.length);
+        
+        // Atualizar estado global
+        EliteControl.state = EliteControl.state || {};
+        EliteControl.state.availableProducts = products;
+        EliteControl.state.saleCart = EliteControl.state.saleCart || [];
+        
+        // Renderizar produtos
+        renderAvailableProducts(products);
 
         // Configurar event listeners
         setupSaleFormWithCRMEventListeners(currentUser);
 
-        // Atualizar hora a cada minuto
+        // Atualizar hora atual
+        updateCurrentTime();
         setInterval(updateCurrentTime, 60000);
 
         console.log("✅ Formulário de venda com CRM inicializado");
