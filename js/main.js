@@ -613,46 +613,95 @@ function renderAvailableProducts(products) {
         .sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0))
         .slice(0, 3);
 
-    container.innerHTML = `
-        <div class="flex gap-4 overflow-x-auto pb-2">
-            ${topProducts.map(product => `
-                <div class="product-select-card flex-1 min-w-[280px]">
-                    <div class="product-select-header">
-                        <span class="product-select-name">${product.name}</span>
-                        <span class="product-select-price">${formatCurrency(product.price)}</span>
-                    </div>
-                    <div class="product-select-info">
-                        <span class="product-category">${product.category}</span>
-                        <span class="product-stock ${product.stock > 10 ? 'available' : product.stock > 0 ? 'low' : 'out'}">
-                            ${product.stock > 0 ? `${product.stock} em estoque` : 'Indisponível'}
-                        </span>
-                    </div>
-                    ${product.stock > 0 ? `
-                        <div class="product-select-actions">
-                            <div class="quantity-controls">
-                                <button class="quantity-btn" onclick="changeQuantity('${product.id}', -1)">-</button>
-                                <input type="number" 
-                                       class="quantity-input" 
-                                       value="1" 
-                                       min="1" 
-                                       max="${product.stock}"
-                                       onchange="updateQuantity('${product.id}')"
-                                       id="quantity-${product.id}">
-                                <button class="quantity-btn" onclick="changeQuantity('${product.id}', 1)">+</button>
-                            </div>
-                            <button class="btn-primary" onclick="toggleProductSelection('${product.id}')">
-                                <i class="fas fa-cart-plus"></i>
-                            </button>
+    // Renderizar seção de produtos mais vendidos
+    const topProductsHtml = `
+        <div class="top-products-section">
+            <h3 class="text-lg font-semibold text-slate-100">
+                <i class="fas fa-star mr-2"></i>
+                Produtos Mais Vendidos
+            </h3>
+            <div class="top-products-grid">
+                ${topProducts.map(product => `
+                    <div class="top-product-card">
+                        <div class="top-product-name">${product.name}</div>
+                        <div class="top-product-stats">
+                            <span><i class="fas fa-chart-line mr-1"></i> ${product.totalSold || 0} vendas</span>
                         </div>
-                    ` : `
-                        <button class="btn-secondary w-full" disabled>
-                            <i class="fas fa-times mr-2"></i>Indisponível
-                        </button>
-                    `}
-                </div>
-            `).join('')}
+                        <div class="top-product-price">${formatCurrency(product.price)}</div>
+                        ${product.stock > 0 ? `
+                            <button class="btn-primary w-full mt-3" onclick="toggleProductSelection('${product.id}')">
+                                <i class="fas fa-cart-plus mr-2"></i>Adicionar
+                            </button>
+                        ` : `
+                            <button class="btn-secondary w-full mt-3" disabled>
+                                <i class="fas fa-times mr-2"></i>Indisponível
+                            </button>
+                        `}
+                    </div>
+                `).join('')}
+            </div>
         </div>
     `;
+
+    // Renderizar lista completa de produtos
+    const productsListHtml = `
+        <div class="products-grid mt-6">
+            ${products.map(product => {
+                const lowStockThreshold = Number(product.lowStockAlert) || 10;
+                const isLowStock = product.stock <= lowStockThreshold && product.stock > 0;
+                const stockClass = product.stock === 0 ? 'out' : (isLowStock ? 'low' : 'available');
+                const stockLabel = product.stock === 0 ? 'Indisponível' : 
+                                 (isLowStock ? 'Estoque baixo' : 'Em estoque');
+
+                return `
+                    <div class="product-card ${product.stock === 0 ? 'opacity-60' : ''}">
+                        <div class="product-header">
+                            <div>
+                                <h4 class="text-lg font-semibold text-slate-100">${product.name}</h4>
+                                <span class="text-sm text-slate-400">${product.category}</span>
+                            </div>
+                            <span class="text-lg font-semibold text-sky-400">${formatCurrency(product.price)}</span>
+                        </div>
+                        
+                        <div class="product-info">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-400">Estoque:</span>
+                                <span class="stock-badge ${stockClass}">${stockLabel}</span>
+                            </div>
+                            ${product.stock > 0 ? `
+                                <div class="flex items-center gap-3">
+                                    <div class="quantity-controls flex-1">
+                                        <button onclick="changeQuantity('${product.id}', -1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input type="number" 
+                                               id="quantity-${product.id}"
+                                               value="1"
+                                               min="1"
+                                               max="${product.stock}"
+                                               onchange="updateQuantity('${product.id}')"
+                                               class="quantity-input">
+                                        <button onclick="changeQuantity('${product.id}', 1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    <button class="btn-primary" onclick="toggleProductSelection('${product.id}')">
+                                        <i class="fas fa-cart-plus"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button class="btn-secondary w-full" disabled>
+                                    <i class="fas fa-times mr-2"></i>Indisponível
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    container.innerHTML = topProductsHtml + productsListHtml;
 }
 
 function addSaleFormStyles() {
