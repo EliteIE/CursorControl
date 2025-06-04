@@ -984,21 +984,19 @@ function toggleProductSelection(productId) {
 }
 
 function changeQuantity(productId, delta, isCartItem = false) {
-    const inputId = isCartItem ? `cart-quantity-${productId}` : `quantity-${productId}`;
-    const input = document.getElementById(inputId);
-    if (!input) return;
+    const quantityInput = document.getElementById(`quantity-${productId}`);
+    if (!quantityInput) return;
 
-    const currentValue = parseInt(input.value) || 1;
-    const product = EliteControl.state.availableProducts.find(p => p.id === productId);
-    if (!product) return;
-
-    let newValue = currentValue + delta;
-    newValue = Math.max(1, Math.min(newValue, product.stock));
-    input.value = newValue;
-
+    const currentValue = parseInt(quantityInput.value) || 0;
+    const newValue = Math.max(1, currentValue + delta);
+    
+    quantityInput.value = newValue;
+    
     if (isCartItem) {
         updateCartItemQuantity(productId, newValue);
     }
+    
+    updateQuantity(productId);
 }
 
 function updateCartItemQuantity(productId, quantity) {
@@ -1013,16 +1011,13 @@ function updateQuantity(productId) {
     const quantityInput = document.getElementById(`quantity-${productId}`);
     if (!quantityInput) return;
 
-    const quantity = parseInt(quantityInput.value);
     const product = EliteControl.state.availableProducts.find(p => p.id === productId);
-    
     if (!product) return;
 
-    if (quantity < 1) {
-        quantityInput.value = 1;
-    } else if (quantity > product.stock) {
+    const quantity = parseInt(quantityInput.value) || 0;
+    if (quantity > product.stock) {
         quantityInput.value = product.stock;
-        showTemporaryAlert(`Máximo disponível: ${product.stock}`, 'warning', 2000);
+        showTemporaryAlert(`Quantidade máxima disponível: ${product.stock}`, 'warning');
     }
 }
 
@@ -1043,67 +1038,59 @@ function updateSaleInterface() {
 }
 
 function updateCartDisplay() {
-    const container = document.getElementById('cartItemsList');
-    if (!container) return;
+    const cartContainer = document.getElementById('cartItemsList');
+    const subtotalElement = document.getElementById('cartSubtotal');
+    const totalElement = document.getElementById('cartTotal');
+    
+    if (!cartContainer || !subtotalElement || !totalElement) return;
 
     if (EliteControl.state.saleCart.length === 0) {
-        container.innerHTML = `
+        cartContainer.innerHTML = `
             <div class="empty-cart">
-                <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-400"></i>
-                <p class="text-slate-400">Nenhum produto adicionado</p>
-                <p class="text-sm text-slate-500">Selecione produtos acima para adicionar à venda</p>
+                <i class="fas fa-shopping-cart fa-2x mb-2 text-slate-500"></i>
+                <p>Carrinho vazio</p>
             </div>
         `;
-        document.getElementById('cartSummary').style.display = 'none';
-        document.getElementById('clearCartButton').style.display = 'none';
+        subtotalElement.textContent = formatCurrency(0);
+        totalElement.textContent = formatCurrency(0);
         return;
     }
 
-    container.innerHTML = EliteControl.state.saleCart.map(item => `
+    const total = EliteControl.state.saleCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    cartContainer.innerHTML = EliteControl.state.saleCart.map(item => `
         <div class="cart-item">
             <div class="cart-item-info">
-                <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-details">${item.category}</div>
+                <h4 class="cart-item-name">${item.name}</h4>
+                <p class="cart-item-price">${formatCurrency(item.price)}</p>
             </div>
-            <div class="cart-item-actions">
-                <div class="cart-quantity-controls">
-                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', -1, true)">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <input type="number" 
-                           class="cart-quantity-input" 
-                           id="cart-quantity-${item.productId}"
-                           value="${item.quantity}" 
-                           min="1" 
-                           max="${item.stock}"
-                           onchange="updateCartItemQuantity('${item.productId}', this.value)">
-                    <button class="cart-quantity-btn" onclick="changeQuantity('${item.productId}', 1, true)">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div class="cart-item-price">${formatCurrency(item.price * item.quantity)}</div>
-                <button class="cart-item-remove" onclick="removeCartItem('${item.productId}')">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div class="cart-item-quantity">
+                <button onclick="changeQuantity('${item.id}', -1, true)" class="quantity-btn">-</button>
+                <input type="number" 
+                       id="quantity-${item.id}" 
+                       value="${item.quantity}" 
+                       min="1" 
+                       class="quantity-input"
+                       onchange="updateCartItemQuantity('${item.id}', this.value)">
+                <button onclick="changeQuantity('${item.id}', 1, true)" class="quantity-btn">+</button>
             </div>
+            <button onclick="removeCartItem('${item.id}')" class="remove-item-btn">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `).join('');
 
-    // Atualizar sumário
-    const subtotal = EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
-    document.getElementById('cartTotal').textContent = formatCurrency(subtotal);
-    document.getElementById('cartSummary').style.display = 'block';
-    document.getElementById('clearCartButton').style.display = 'block';
-
+    subtotalElement.textContent = formatCurrency(total);
+    totalElement.textContent = formatCurrency(total);
+    
     updateFinalizeSaleButton();
 }
 
 function updateCurrentTime() {
-    const dateTimeElement = document.getElementById('currentDateTime');
-    if (dateTimeElement) {
+    const element = document.getElementById('currentDateTime');
+    if (element) {
         const now = new Date();
-        dateTimeElement.textContent = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
+        element.textContent = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
     }
 }
 
@@ -1111,14 +1098,16 @@ function updateFinalizeSaleButton() {
     const button = document.getElementById('finalizeSaleButton');
     if (!button) return;
 
-    button.disabled = EliteControl.state.saleCart.length === 0;
+    const hasCustomer = EliteControl.state.selectedCustomer !== null;
+    const hasItems = EliteControl.state.saleCart.length > 0;
+
+    button.disabled = !hasCustomer || !hasItems;
+    button.title = !hasCustomer ? 'Selecione um cliente' : !hasItems ? 'Adicione produtos ao carrinho' : '';
 }
 
 function closeSaleSuccessModal() {
-    const modal = document.getElementById('saleSuccessModal');
-    if (modal) {
-        modal.remove();
-    }
+    closeCustomModal();
+    window.location.hash = '#vendas';
 }
 
 // === AUTENTICAÇÃO E NAVEGAÇÃO ===
@@ -1715,29 +1704,24 @@ function renderCustomerSuggestions(suggestions) {
     if (!suggestions || suggestions.length === 0) {
         container.innerHTML = `
             <div class="customer-suggestion-item">
-                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
+                <div class="text-slate-400">Nenhum cliente encontrado</div>
             </div>
         `;
         container.classList.remove('hidden');
         return;
     }
 
-    container.innerHTML = suggestions.map(customer => `
+    const html = suggestions.map(customer => `
         <div class="customer-suggestion-item" onclick="selectCustomer('${customer.id}')">
-            <div class="customer-suggestion-name">
-                ${customer.name}
-                ${customer.totalPurchases > 0 ? 
-                    `<span class="text-sky-400 text-xs">${customer.totalPurchases} compras</span>` : ''}
-            </div>
+            <div class="customer-suggestion-name">${customer.name}</div>
             <div class="customer-suggestion-info">
-                ${customer.phone ? 
-                    `<span><i class="fas fa-phone text-slate-500 mr-1"></i>${customer.phone}</span>` : ''}
-                ${customer.email ? 
-                    `<span><i class="fas fa-envelope text-slate-500 mr-1"></i>${customer.email}</span>` : ''}
+                ${customer.phone ? `<span><i class="fas fa-phone text-sky-400 mr-1"></i>${customer.phone}</span>` : ''}
+                ${customer.email ? `<span><i class="fas fa-envelope text-sky-400 mr-1"></i>${customer.email}</span>` : ''}
             </div>
         </div>
     `).join('');
 
+    container.innerHTML = html;
     container.classList.remove('hidden');
 }
 
@@ -1912,8 +1896,7 @@ function setupSaleFormWithCRMEventListeners(currentUser) {
                                         <div class="customer-suggestion-name">
                                             ${customer.name}
                                             ${customer.totalPurchases > 0 ? 
-                                                `<span class="text-sky-400 text-xs ml-2">${customer.totalPurchases} compras</span>` : 
-                                                '<span class="text-slate-500 text-xs ml-2">Novo cliente</span>'}
+                                                `<span class="text-sky-400 text-xs">${customer.totalPurchases} compras</span>` : ''}
                                         </div>
                                         <div class="customer-suggestion-info">
                                             ${customer.phone ? `<span class="mr-3"><i class="fas fa-phone-alt mr-1"></i>${customer.phone}</span>` : ''}
@@ -2021,7 +2004,7 @@ function renderCustomerSuggestions(suggestions) {
     if (suggestions.length === 0) {
         container.innerHTML = `
             <div class="customer-suggestion-item">
-                <div class="text-slate-400 text-sm">Nenhum cliente encontrado</div>
+                <div class="text-slate-400">Nenhum cliente encontrado</div>
             </div>
         `;
     } else {
@@ -4676,117 +4659,34 @@ async function reloadProductsIfNeeded() {
 }
 
 function showSaleSuccessModal(sale) {
-    const total = sale.productsDetail.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-
-    const modalHtml = `
-        <div class="modal-backdrop show" id="saleSuccessModal">
-            <div class="modal-content show" style="max-width: 500px;">
-                <div class="modal-header">
-                    <i class="fas fa-check-circle text-green-500 text-2xl mr-3"></i>
-                    <h3 class="modal-title">Venda Realizada com Sucesso!</h3>
-                </div>
-
-                <div class="modal-body">
-                    <div class="success-details">
-                        <div class="detail-row">
-                            <span class="detail-label">Total da Venda:</span>
-                            <span class="detail-value text-green-500 font-bold text-xl">${formatCurrency(total)}</span>
-                        </div>
-
-                        ${sale.customerName ? `
-                            <div class="detail-row">
-                                <span class="detail-label">Cliente:</span>
-                                <span class="detail-value">${sale.customerName}</span>
-                            </div>
-                        ` : ''}
-
-                        <div class="detail-row">
-                            <span class="detail-label">Data:</span>
-                            <span class="detail-value">${formatDate(new Date())}</span>
-                        </div>
-
-                        <div class="detail-row">
-                            <span class="detail-label">Produtos:</span>
-                            <span class="detail-value">${sale.productsDetail.length} item(s)</span>
-                        </div>
-
-                        <div class="products-sold">
-                            <h4 class="text-sm font-semibold text-slate-300 mb-2">Itens Vendidos:</h4>
-                            <div class="sold-items">
-                                ${sale.productsDetail.map(item => `
-                                    <div class="sold-item">
-                                        <span>${item.name}</span>
-                                        <span>${item.quantity}x ${formatCurrency(item.unitPrice)}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn-secondary" onclick="closeSaleSuccessModal(); window.print();">
-                        <i class="fas fa-print mr-2"></i>
-                        Imprimir
-                    </button>
-                    <button class="btn-primary" onclick="closeSaleSuccessModal()">
-                        <i class="fas fa-thumbs-up mr-2"></i>
-                        Perfeito!
-                    </button>
-                </div>
+    const modalContent = `
+        <div class="text-center mb-6">
+            <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
+            <h3 class="text-xl font-semibold text-slate-100 mb-2">Venda Realizada com Sucesso!</h3>
+            <p class="text-slate-400">Venda registrada para ${sale.customerName}</p>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-slate-400">Total da venda:</span>
+                <span class="text-xl font-bold text-green-400">${formatCurrency(sale.total)}</span>
             </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400">Itens vendidos:</span>
+                <span class="text-slate-100">${sale.items.length} ${sale.items.length === 1 ? 'item' : 'itens'}</span>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button onclick="closeSaleSuccessModal()" class="btn-primary">
+                <i class="fas fa-check mr-2"></i>
+                OK
+            </button>
         </div>
     `;
 
-    if (!document.getElementById('saleSuccessStyles')) {
-        const style = document.createElement('style');
-        style.id = 'saleSuccessStyles';
-        style.textContent = `
-            .success-details {
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.3);
-                border-radius: 0.5rem;
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .detail-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 0.5rem;
-            }
-
-            .detail-label {
-                color: #94A3B8;
-                font-size: 0.875rem;
-            }
-
-            .detail-value {
-                color: #F1F5F9;
-                font-weight: 500;
-            }
-
-            .products-sold {
-                margin-top: 1rem;
-                padding-top: 1rem;
-                border-top: 1px solid rgba(51, 65, 85, 0.5);
-            }
-
-            .sold-item {
-                display: flex;
-                justify-content: space-between;
-                padding: 0.25rem 0;
-                font-size: 0.875rem;
-                color: #94A3B8;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    showCustomModal('Venda Concluída', modalContent);
 }
 
-// === FUNÇÕES GLOBAIS ===
+// Inicializar as funções globais
 window.toggleProductSelection = toggleProductSelection;
 window.changeQuantity = changeQuantity;
 window.updateQuantity = updateQuantity;
@@ -4794,9 +4694,6 @@ window.removeCartItem = removeCartItem;
 window.clearCart = clearCart;
 window.updateCartItemQuantity = updateCartItemQuantity;
 window.closeSaleSuccessModal = closeSaleSuccessModal;
-window.handleEditProduct = handleEditProduct;
-window.handleDeleteProductConfirmation = handleDeleteProductConfirmation;
-window.openProductModal = openProductModal;
 window.selectCustomer = selectCustomer;
 window.saveNewCustomer = saveNewCustomer;
 
@@ -4810,79 +4707,7 @@ console.log("   - Integração de vendas com clientes");
 console.log("   - Interface responsiva e moderna");
 
 function setupSaleFormEventListeners(currentUser) {
-    // Busca de clientes
-    const customerSearchInput = document.getElementById('customerSearchInput');
-    const customerSuggestions = document.getElementById('customerSuggestions');
-    
-    if (customerSearchInput) {
-        let debounceTimeout;
-        
-        customerSearchInput.addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.trim();
-            
-            // Limpar o timeout anterior
-            if (debounceTimeout) clearTimeout(debounceTimeout);
-            
-            // Se o campo estiver vazio, esconder as sugestões
-            if (!searchTerm) {
-                customerSuggestions.classList.add('hidden');
-                return;
-            }
-
-            // Configurar novo timeout para debounce
-            debounceTimeout = setTimeout(async () => {
-                try {
-                    const customersRef = firebase.firestore().collection('customers');
-                    const snapshot = await customersRef
-                        .orderBy('name')
-                        .startAt(searchTerm)
-                        .endAt(searchTerm + '\uf8ff')
-                        .limit(5)
-                        .get();
-
-                    const suggestions = [];
-                    snapshot.forEach(doc => {
-                        suggestions.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    renderCustomerSuggestions(suggestions);
-                } catch (error) {
-                    console.error('Erro ao buscar clientes:', error);
-                    customerSuggestions.innerHTML = `
-                        <div class="customer-suggestion-item">
-                            <div class="text-red-400 text-sm">Erro ao buscar clientes. Tente novamente.</div>
-                        </div>
-                    `;
-                    customerSuggestions.classList.remove('hidden');
-                }
-            }, 300);
-        });
-
-        // Fechar sugestões ao clicar fora
-        document.addEventListener('click', (e) => {
-            if (!customerSearchInput.contains(e.target) && !customerSuggestions.contains(e.target)) {
-                customerSuggestions.classList.add('hidden');
-            }
-        });
-
-        // Prevenir que o clique nas sugestões feche o dropdown
-        customerSuggestions.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    // Busca de produtos
-    const productSearchInput = document.getElementById('productSearchInput');
-    if (productSearchInput) {
-        productSearchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            const filteredProducts = EliteControl.state.availableProducts.filter(product =>
-                product.name.toLowerCase().includes(searchTerm) ||
-                product.category.toLowerCase().includes(searchTerm)
-            );
-            renderAvailableProducts(filteredProducts);
-        });
-    }
+    // ... existing code ...
 
     // Botão Novo Cliente
     const newCustomerButton = document.getElementById('newCustomerButton');
@@ -4925,120 +4750,168 @@ function setupSaleFormEventListeners(currentUser) {
         });
     }
 
-    // Botão Finalizar Venda
-    const finalizeSaleButton = document.getElementById('finalizeSaleButton');
-    if (finalizeSaleButton) {
-        finalizeSaleButton.addEventListener('click', async () => {
-            if (!EliteControl.state.selectedCustomer || EliteControl.state.saleCart.length === 0) return;
-
-            try {
-                const sale = {
-                    customerId: EliteControl.state.selectedCustomer.id,
-                    customerName: EliteControl.state.selectedCustomer.name,
-                    items: EliteControl.state.saleCart,
-                    total: EliteControl.state.saleCart.reduce((total, item) => total + (item.price * item.quantity), 0),
-                    date: new Date(),
-                    vendorId: currentUser.uid,
-                    vendorName: currentUser.name || currentUser.email
-                };
-
-                await firebase.firestore().collection('sales').add(sale);
-                
-                // Atualizar estoque
-                const batch = firebase.firestore().batch();
-                for (const item of sale.items) {
-                    const productRef = firebase.firestore().collection('products').doc(item.productId);
-                    batch.update(productRef, {
-                        stock: firebase.firestore.FieldValue.increment(-item.quantity)
-                    });
-                }
-                await batch.commit();
-
-                // Atualizar estatísticas do cliente
-                const customerRef = firebase.firestore().collection('customers').doc(sale.customerId);
-                await customerRef.update({
-                    totalPurchases: firebase.firestore.FieldValue.increment(1),
-                    lastPurchaseDate: sale.date,
-                    totalSpent: firebase.firestore.FieldValue.increment(sale.total)
-                });
-
-                // Limpar formulário
-                clearCart();
-                EliteControl.state.selectedCustomer = null;
-                document.getElementById('selectedCustomerInfo').classList.add('hidden');
-                document.getElementById('customerSearchInput').value = '';
-                updateFinalizeSaleButton();
-
-                // Mostrar modal de sucesso
-                showSaleSuccessModal(sale);
-
-                // Recarregar produtos
-                await reloadProductsIfNeeded();
-            } catch (error) {
-                console.error('Erro ao finalizar venda:', error);
-                showTemporaryAlert('Erro ao finalizar venda. Tente novamente.', 'error');
-            }
-        });
-    }
+    // ... rest of existing code ...
 }
 
-// Função para atualizar a hora atual
-function updateCurrentTime() {
-    const element = document.getElementById('currentDateTime');
-    if (element) {
-        const now = new Date();
-        element.textContent = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
-    }
+// ... rest of existing code ...
+
+// === FUNÇÕES DE UTILIDADE ===
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
 }
 
-// Função para atualizar o botão de finalizar venda
-function updateFinalizeSaleButton() {
-    const button = document.getElementById('finalizeSaleButton');
-    if (!button) return;
-
-    const hasCustomer = EliteControl.state.selectedCustomer !== null;
-    const hasItems = EliteControl.state.saleCart.length > 0;
-
-    button.disabled = !hasCustomer || !hasItems;
-    button.title = !hasCustomer ? 'Selecione um cliente' : !hasItems ? 'Adicione produtos ao carrinho' : '';
+function formatDate(dateInput) {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(date);
 }
 
-// Função para mostrar o modal de sucesso da venda
-function showSaleSuccessModal(sale) {
+function formatDateTime(dateInput) {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
+function truncateText(text, maxLength) {
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+// === FUNÇÕES DE INTERFACE ===
+
+function showTemporaryAlert(message, type = 'info', duration = 4000) {
+    const alertContainer = document.getElementById('alertContainer') || createAlertContainer();
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} animate-fade-in`;
+    
+    const icon = getAlertIcon(type);
+    alert.innerHTML = `
+        <div class="alert-content">
+            <i class="${icon}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+
+    alertContainer.appendChild(alert);
+
+    setTimeout(() => {
+        alert.classList.add('animate-fade-out');
+        setTimeout(() => alert.remove(), 300);
+    }, duration);
+}
+
+function createAlertContainer() {
+    const container = document.createElement('div');
+    container.id = 'alertContainer';
+    container.className = 'alert-container';
+    document.body.appendChild(container);
+    return container;
+}
+
+function getAlertIcon(type) {
+    const icons = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+    };
+    return icons[type] || icons.info;
+}
+
+function showCustomConfirm(message, onConfirm) {
     const modalContent = `
         <div class="text-center mb-6">
-            <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
-            <h3 class="text-xl font-semibold text-slate-100 mb-2">Venda Realizada com Sucesso!</h3>
-            <p class="text-slate-400">Venda registrada para ${sale.customerName}</p>
+            <i class="fas fa-question-circle text-yellow-400 text-5xl mb-4"></i>
+            <h3 class="text-xl font-semibold text-slate-100 mb-2">Confirmação</h3>
+            <p class="text-slate-400">${message}</p>
         </div>
-        <div class="bg-slate-800 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-slate-400">Total da venda:</span>
-                <span class="text-xl font-bold text-green-400">${formatCurrency(sale.total)}</span>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-slate-400">Itens vendidos:</span>
-                <span class="text-slate-100">${sale.items.length} ${sale.items.length === 1 ? 'item' : 'itens'}</span>
-            </div>
-        </div>
-        <div class="flex justify-end">
-            <button onclick="closeSaleSuccessModal()" class="btn-primary">
+        <div class="flex justify-end gap-4">
+            <button onclick="closeCustomModal()" class="btn-secondary">
+                <i class="fas fa-times mr-2"></i>
+                Cancelar
+            </button>
+            <button onclick="handleCustomConfirm()" class="btn-primary">
                 <i class="fas fa-check mr-2"></i>
-                OK
+                Confirmar
             </button>
         </div>
     `;
 
-    showCustomModal('Venda Concluída', modalContent);
+    window.handleCustomConfirm = () => {
+        closeCustomModal();
+        onConfirm();
+        delete window.handleCustomConfirm;
+    };
+
+    showCustomModal('Confirmação', modalContent);
 }
 
-// Função para fechar o modal de sucesso
-function closeSaleSuccessModal() {
-    closeCustomModal();
-    window.location.hash = '#vendas';
+function showCustomModal(title, content) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">${title}</h3>
+                <button onclick="closeCustomModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('visible'), 50);
+
+    const handleKeydown = (e) => {
+        if (e.key === 'Escape') {
+            closeCustomModal();
+            document.removeEventListener('keydown', handleKeydown);
+        }
+    };
+    document.addEventListener('keydown', handleKeydown);
 }
 
-// Inicializar as funções globais
+function closeCustomModal() {
+    const modal = document.querySelector('.modal-backdrop');
+    if (modal) {
+        modal.classList.remove('visible');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// === FUNÇÕES DE RECARREGAMENTO ===
+
+async function reloadProductsIfNeeded() {
+    try {
+        const products = await DataService.getProducts();
+        EliteControl.state.availableProducts = products;
+        renderAvailableProducts(products);
+    } catch (error) {
+        console.error('Erro ao recarregar produtos:', error);
+        showTemporaryAlert('Erro ao atualizar lista de produtos', 'error');
+    }
+}
+
+// === FUNÇÕES GLOBAIS ===
+
+// Registrar funções globais
 window.toggleProductSelection = toggleProductSelection;
 window.changeQuantity = changeQuantity;
 window.updateQuantity = updateQuantity;
@@ -5048,3 +4921,9 @@ window.updateCartItemQuantity = updateCartItemQuantity;
 window.closeSaleSuccessModal = closeSaleSuccessModal;
 window.selectCustomer = selectCustomer;
 window.saveNewCustomer = saveNewCustomer;
+window.showCustomerModal = showCustomerModal;
+window.closeCustomModal = closeCustomModal;
+window.handleCustomConfirm = null; // Será definido dinamicamente
+
+// Log de inicialização
+console.log("✅ EliteControl v2.0 com IA e CRM carregado com sucesso!");
