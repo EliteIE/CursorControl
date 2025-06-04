@@ -1826,3 +1826,104 @@ table {
     border-radius: 0.75rem;
     padding: 1rem 0;
 }
+
+/* === CUSTOMER SELECTION === */
+.customer-selection-section {
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.customer-search-container {
+    position: relative;
+    z-index: 1200;
+    width: 100%;
+    max-width: 500px;
+}
+
+.customer-search-input {
+    width: 100%;
+    background-color: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: #F1F5F9;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.seller-info-section {
+    text-align: right;
+    padding: 0.75rem;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.seller-info-name {
+    font-size: 0.875rem;
+    color: #94A3B8;
+    margin-bottom: 0.25rem;
+}
+
+.seller-info-role {
+    font-size: 0.75rem;
+    color: #64748B;
+}
+
+.seller-info-time {
+    font-size: 0.75rem;
+    color: #38BDF8;
+    margin-top: 0.5rem;
+}
+
+/* === PRODUTOS === */
+.products-section {
+    margin-top: 2rem;
+}
+
+.top-products-section {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.top-products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.top-product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(234, 179, 8, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.top-product-item:hover {
+    border-color: rgba(234, 179, 8, 0.5);
+    transform: translateY(-1px);
+}
+
+.section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-title i {
+    font-size: 1rem;
+}
