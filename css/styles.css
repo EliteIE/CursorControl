@@ -188,39 +188,27 @@ body {
 .header-info {
     display: flex;
     align-items: center;
-    gap: 2rem;
-    margin-left: auto;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
 }
 
 .user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem;
-    background: rgba(51, 65, 85, 0.3);
-    border: 1px solid rgba(71, 85, 105, 0.5);
-    border-radius: 0.5rem;
-    transition: all 0.2s ease;
-}
-
-.user-info:hover {
-    background: rgba(51, 65, 85, 0.5);
-    border-color: rgba(56, 189, 248, 0.5);
-}
-
-.user-details {
     text-align: right;
 }
 
 .user-name {
-    color: #F1F5F9;
-    font-weight: 500;
     font-size: 0.875rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 0.25rem;
 }
 
 .user-email {
-    color: #94A3B8;
     font-size: 0.75rem;
+    color: #94a3b8;
 }
 
 .notification-button {
@@ -1099,127 +1087,103 @@ table {
 
 /* === FORMULÁRIOS === */
 .form-group {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 1rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
 }
 
 .form-label {
     display: block;
-    margin-bottom: var(--spacing-sm);
     font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-text-light);
+    color: #94a3b8;
+    margin-bottom: 0.375rem;
 }
 
-.form-input, .form-select {
+.form-input,
+.form-textarea {
     width: 100%;
-    background-color: rgba(51, 65, 85, 0.8);
+    padding: 0.5rem 0.75rem;
+    background: rgba(51, 65, 85, 0.5);
     border: 1px solid rgba(71, 85, 105, 0.5);
-    border-radius: var(--border-radius-md);
-    padding: 0.75rem var(--spacing-md);
-    color: var(--color-text-light);
-    transition: var(--transition-default);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    border-radius: 0.375rem;
+    color: #f1f5f9;
     font-size: 0.875rem;
+    transition: all 0.2s ease;
 }
 
-.form-input:focus, .form-select:focus {
+.form-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    border-color: rgba(56, 189, 248, 0.5);
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
 }
 
-.form-input::placeholder {
-    color: var(--color-text-muted);
-}
-
-/* === MODAL STYLES === */
+/* === MODAL === */
 .modal-backdrop {
     position: fixed;
-    inset: 0;
-    background-color: rgba(15, 23, 42, 0.75);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1300;
-    padding: 1rem;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    opacity: 0;
+    visibility: hidden;
     transition: all 0.3s ease;
 }
 
-.modal-backdrop.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+.modal-backdrop.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal-content {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border-radius: 1rem;
-    border: 1px solid rgba(51, 65, 85, 0.5);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-    width: 100%;
+    background: rgb(30, 41, 59);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.75rem;
+    width: 90%;
     max-width: 500px;
-    transform: scale(0.95);
-    opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    overflow: hidden;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    max-height: 85vh;
+    overflow-y: auto;
     z-index: 1301;
-}
-
-.modal-backdrop:not(.hidden) .modal-content {
-    transform: scale(1);
-    opacity: 1;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
 }
 
 .modal-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.5);
 }
 
 .modal-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
-    color: #F1F5F9;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    color: #94A3B8;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 0.25rem;
-    transition: all 0.2s ease;
-    width: 2rem;
-    height: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-close:hover {
-    color: #F1F5F9;
-    background: rgba(51, 65, 85, 0.5);
+    color: #f1f5f9;
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    padding: 1.5rem;
-    border-top: 1px solid rgba(51, 65, 85, 0.5);
+    padding: 1rem;
+    border-top: 1px solid rgba(71, 85, 105, 0.5);
 }
 
 /* === UTILITÁRIOS === */
@@ -1808,4 +1772,57 @@ table {
 .add-to-cart-btn:hover {
     background: #1d4ed8;
     transform: translateY(-1px);
+}
+
+/* === PRODUTOS === */
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+}
+
+.top-products-section {
+    margin-bottom: 2rem;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 0.75rem;
+    padding: 1rem 0;
+}
+
+.top-products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0 1rem;
+}
+
+.top-product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.top-product-item:hover {
+    border-color: rgba(234, 179, 8, 0.5);
+    transform: translateY(-1px);
+}
+
+.product-sales {
+    font-size: 0.875rem;
+    color: #eab308;
+}
+
+.products-section {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 0.75rem;
+    padding: 1rem 0;
 }
